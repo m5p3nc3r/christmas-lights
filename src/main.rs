@@ -57,27 +57,27 @@ impl RenderEngine {
         self.buffer[index as usize]
     }
 
-    fn rainbow(&mut self, time: f32) {
+    fn render(&mut self, time: f32) {
         for x in 0..NUM_DROP {
             for y in 0..LEDS_PER_DROP {
-                let offset = y as f32;
-
-                let t = time + offset / 15.0;
-
-                let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
-                let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
-                let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
-
-                self.set_pixel(
-                    x,
-                    y,
-                    RGB8 {
-                        r: (r * 255.0) as u8,
-                        g: (g * 255.0) as u8,
-                        b: (b * 255.0) as u8,
-                    },
-                );
+                self.set_pixel(x, y, Self::rainbow(x, y, time));
             }
+        }
+    }
+
+    fn rainbow(x: u32, y: u32, time: f32) -> RGB8 {
+        let offset = y as f32;
+
+        let t = time + offset / 15.0;
+
+        let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
+        let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
+        let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
+
+        RGB8 {
+            r: (r * 255.0) as u8,
+            g: (g * 255.0) as u8,
+            b: (b * 255.0) as u8,
         }
     }
 }
@@ -137,7 +137,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 
 fn update_offscreen_render(time: Res<Time>, mut render_engine: ResMut<RenderEngine>) {
     let time_seconds = time.elapsed_seconds();
-    render_engine.rainbow(time_seconds);
+    render_engine.render(time_seconds);
 }
 
 fn update_pixels(render_engine: ResMut<RenderEngine>, mut query: Query<(&Pixel, &mut Sprite)>) {
