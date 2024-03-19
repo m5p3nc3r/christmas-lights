@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 //
-const NUM_DROP: u16 = 50;
-const LEDS_PER_DROPW: u16 = 24;
+const NUM_DROP: u32 = 50;
+const LEDS_PER_DROP: u32 = 24;
 
 #[derive(Component)]
 struct Pixel {
@@ -32,7 +32,7 @@ fn setup(mut commands: Commands) {
     let mut index = 0;
 
     for i in 0..NUM_DROP {
-        for j in 0..LEDS_PER_DROPW {
+        for j in 0..LEDS_PER_DROP {
             commands.spawn((
                 SpriteBundle {
                     transform: Transform {
@@ -62,10 +62,14 @@ fn update_offscreen_render() {}
 fn update_pixels(time: Res<Time>, mut query: Query<(&Pixel, &mut Sprite)>) {
     let time_seconds = time.elapsed_seconds();
 
-    for (_, mut sprite) in query.iter_mut() {
-        let r = ((time_seconds * 2.0).sin() * 0.5 + 0.5) as f32;
-        let g = ((time_seconds * 0.7).sin() * 0.5 + 0.5) as f32;
-        let b = ((time_seconds * 1.3).sin() * 0.5 + 0.5) as f32;
+    for (pixel, mut sprite) in query.iter_mut() {
+        let offset = (pixel.index % LEDS_PER_DROP) as f32;
+        //        let offset = (pixel.index / LEDS_PER_DROP) as f32;
+        let t = time_seconds + offset / 15.0;
+
+        let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
+        let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
+        let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
 
         sprite.color = Color::rgb(r, g, b);
     }
