@@ -1,11 +1,13 @@
-workspace = { members = ["render_engine"] }
 [package]
-name = "led_simulator"
+name = "render_engine"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.13.0"
-render_engine = { path = "./render_engine" }
+glam = { version = "0.26.0", default-features = false }
+
+[features]
+default = ["std"]
+std = ["glam/std"]

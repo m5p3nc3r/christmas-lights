@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use render_engine::{shaders, RenderBuffer, RenderEngine, ShaderInput, RGB8};
 
 //
 const NUM_DROP: u32 = 50;
@@ -17,47 +18,13 @@ impl Pixel {
     }
 }
 
-#[derive(Clone, Copy)]
-struct RGB8 {
-    r: u8,
-    g: u8,
-    b: u8,
-}
-impl Default for RGB8 {
-    fn default() -> Self {
-        Self { r: 0, g: 0, b: 0 }
-    }
-}
-
-trait RenderBuffer {
-    fn size(&self) -> Vec2;
-    fn buffer(&self) -> &[RGB8];
-    fn buffer_mut(&mut self) -> &mut [RGB8];
-
-    fn clear(&mut self) {
-        for i in 0..self.buffer().len() {
-            self.buffer_mut()[i] = RGB8::default();
-        }
-    }
-
-    fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
-        let index = x + y * self.size().x as u32;
-        self.buffer()[index as usize]
-    }
-
-    fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
-        let index = x + y * self.size().x as u32;
-        self.buffer_mut()[index as usize] = color;
-    }
-}
-
 struct Buffer50x24 {
     buffer: [RGB8; NUM_DROP as usize * LEDS_PER_DROP as usize],
 }
 
 impl RenderBuffer for Buffer50x24 {
-    fn size(&self) -> Vec2 {
-        Vec2::new(NUM_DROP as f32, LEDS_PER_DROP as f32)
+    fn size(&self) -> render_engine::Vec2 {
+        render_engine::Vec2::new(NUM_DROP as f32, LEDS_PER_DROP as f32)
     }
 
     fn buffer(&self) -> &[RGB8] {
@@ -80,28 +47,6 @@ impl Default for LEDRenderBuffer {
             buffer: Buffer50x24 {
                 buffer: [RGB8::default(); NUM_DROP as usize * LEDS_PER_DROP as usize],
             },
-        }
-    }
-}
-
-struct RenderEngine {}
-
-impl RenderEngine {
-    fn clear(mut b: impl RenderBuffer) {
-        for i in 0..b.buffer().len() {
-            b.buffer_mut()[i] = RGB8::default();
-        }
-    }
-
-    fn render(
-        uniforms: &ShaderInput,
-        f: fn(fragCoord: Vec2, &ShaderInput) -> RGB8,
-        b: &mut impl RenderBuffer,
-    ) {
-        for x in 0..b.size().x as u32 {
-            for y in 0..b.size().y as u32 {
-                b.set_pixel(x, y, f(Vec2::new(x as f32, y as f32), uniforms));
-            }
         }
     }
 }
@@ -159,21 +104,15 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     }
 }
 
-struct ShaderInput {
-    iResolution: Vec3,
-    iTime: f32,
-    iTimeDelta: f32,
-}
-
 fn update_offscreen_render(time: Res<Time>, mut b: ResMut<LEDRenderBuffer>) {
     let uniforms = ShaderInput {
-        iResolution: Vec3::new(NUM_DROP as f32, LEDS_PER_DROP as f32, 0.0),
+        iResolution: b.buffer.size().extend(0.0),
         iTime: time.elapsed_seconds(),
         iTimeDelta: time.delta_seconds(),
     };
 
-    //render_engine.render(&uniforms, rainbow);
-    RenderEngine::render(&uniforms, rainbow, &mut b.buffer);
+    //    RenderEngine::render(&uniforms, rainbow, &mut b.buffer);
+    RenderEngine::render(&uniforms, shaders::hypnotic_rectangles, &mut b.buffer);
 }
 
 fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
@@ -189,62 +128,3 @@ fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Spri
         );
     }
 }
-
-fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-    let offset = fragCoord.y;
-
-    let t = uniforms.iTime + offset / 15.0;
-
-    let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
-    let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
-    let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
-
-    RGB8 {
-        r: (r * 255.0) as u8,
-        g: (g * 255.0) as u8,
-        b: (b * 255.0) as u8,
-    }
-}
-
-// https://www.shadertoy.com/view/lsX3zr
-fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-    // vec2 center = vec2(0.5,0.5);
-    // float speed = 0.005;
-
-    // void mainImage( out vec4 fragColor, in vec2 fragCoord )
-    // {
-    // float invAr = iResolution.y / iResolution.x;
-    let invAr = uniforms.iResolution.x / uniforms.iResolution.y;
-    // 	vec2 uv = fragCoord.xy / iResolution.xy;
-    let uv = Vec2::new(fragCoord.x, fragCoord.y)
-        / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
-
-    // 	float x = (center.x-uv.x);
-    let x = (0.5 - uv.x);
-    // 	float y = (center.y-uv.y) * invAr;
-    let y = (0.5 - uv.y) * invAr;
-
-    // 	float anm = cos(iTime*0.2);
-    let anm = (uniforms.iTime * 0.2).cos();
-
-    // 	//float r = -(x*x     + y*y)		* anm;  // Circles
-    // 	//float r = -(x*x*x   + y*y*y)		* anm;  // Cubic Shape
-    // 	float r   = -(x*x*x*x + y*y*y*y)	* anm;  // Rectangles
-    let r = -(x * x * x * x + y * y * y * y) * anm;
-    // 	float z   = 1.0 + 0.5*sin((r+iTime*speed)/0.0015);
-    let z = 1.0 + 0.5 * ((r + uniforms.iTime * 0.005) / 0.0015).sin();
-
-    // 	//Color
-    // 	vec3 col = vec4(uv,0.5+0.5*sin(iTime),1.0).xyz;
-    let col = Vec3::new(uv.x, uv.y, 0.5 + 0.5 * uniforms.iTime.sin());
-    // 	vec3 texcol = vec3(z,z,z);
-    let texcol = Vec3::splat(z);
-
-    // 	fragColor = vec4(col*texcol,1.0);
-    RGB8 {
-        r: (col.x * texcol.x * 255.0) as u8,
-        g: (col.y * texcol.y * 255.0) as u8,
-        b: (col.z * texcol.z * 255.0) as u8,
-    }
-}
-// }
