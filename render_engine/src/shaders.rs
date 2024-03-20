@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use crate::ShaderInput;
 use crate::RGB8;
 use crate::{Vec2, Vec3};
@@ -7,9 +9,9 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
 
     let t = uniforms.iTime + offset / 15.0;
 
-    let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
-    let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
-    let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
+    let r = (t * 2.0).sin() * 0.5 + 0.5;
+    let g = (t * 0.7).sin() * 0.5 + 0.5;
+    let b = (t * 1.3).sin() * 0.5 + 0.5;
 
     RGB8 {
         r: (r * 255.0) as u8,
@@ -32,7 +34,7 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
 
     // 	float x = (center.x-uv.x);
-    let x = (0.5 - uv.x);
+    let x = 0.5 - uv.x;
     // 	float y = (center.y-uv.y) * invAr;
     let y = (0.5 - uv.y) * invAr;
 

@@ -5,16 +5,11 @@ pub use glam::f32::Vec3;
 pub mod shaders;
 
 // TODO: Replace with crates.io colour library
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct RGB8 {
     pub r: u8,
     pub g: u8,
     pub b: u8,
-}
-impl Default for RGB8 {
-    fn default() -> Self {
-        Self { r: 0, g: 0, b: 0 }
-    }
 }
 
 pub trait RenderBuffer {
@@ -39,6 +34,7 @@ pub trait RenderBuffer {
     }
 }
 
+#[allow(non_snake_case)]
 pub struct ShaderInput {
     pub iResolution: Vec3,
     pub iTime: f32,
@@ -63,7 +59,7 @@ impl RenderEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     // #[test]
     // fn it_works() {
