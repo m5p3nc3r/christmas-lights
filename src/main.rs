@@ -29,38 +29,78 @@ impl Default for RGB8 {
     }
 }
 
-#[derive(Resource)]
-struct RenderEngine {
-    buffer: [RGB8; NUM_DROP as usize * LEDS_PER_DROP as usize],
-}
-
-impl RenderEngine {
-    fn new() -> Self {
-        Self {
-            buffer: [RGB8::default(); NUM_DROP as usize * LEDS_PER_DROP as usize],
-        }
-    }
+trait RenderBuffer {
+    fn size(&self) -> Vec2;
+    fn buffer(&self) -> &[RGB8];
+    fn buffer_mut(&mut self) -> &mut [RGB8];
 
     fn clear(&mut self) {
-        for i in 0..self.buffer.len() {
-            self.buffer[i] = RGB8::default();
+        for i in 0..self.buffer().len() {
+            self.buffer_mut()[i] = RGB8::default();
         }
-    }
-
-    fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
-        let index = x + y * NUM_DROP;
-        self.buffer[index as usize] = color;
     }
 
     fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
-        let index = x + y * NUM_DROP;
-        self.buffer[index as usize]
+        let index = x + y * self.size().x as u32;
+        self.buffer()[index as usize]
     }
 
-    fn render(&mut self, uniforms: &ShaderInput, f: fn(fragCoord: Vec2, &ShaderInput) -> RGB8) {
-        for x in 0..NUM_DROP {
-            for y in 0..LEDS_PER_DROP {
-                self.set_pixel(x, y, f(Vec2::new(x as f32, y as f32), uniforms));
+    fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
+        let index = x + y * self.size().x as u32;
+        self.buffer_mut()[index as usize] = color;
+    }
+}
+
+struct Buffer50x24 {
+    buffer: [RGB8; NUM_DROP as usize * LEDS_PER_DROP as usize],
+}
+
+impl RenderBuffer for Buffer50x24 {
+    fn size(&self) -> Vec2 {
+        Vec2::new(NUM_DROP as f32, LEDS_PER_DROP as f32)
+    }
+
+    fn buffer(&self) -> &[RGB8] {
+        &self.buffer
+    }
+
+    fn buffer_mut(&mut self) -> &mut [RGB8] {
+        &mut self.buffer
+    }
+}
+
+#[derive(Resource)]
+struct LEDRenderBuffer {
+    buffer: Buffer50x24,
+}
+
+impl Default for LEDRenderBuffer {
+    fn default() -> Self {
+        Self {
+            buffer: Buffer50x24 {
+                buffer: [RGB8::default(); NUM_DROP as usize * LEDS_PER_DROP as usize],
+            },
+        }
+    }
+}
+
+struct RenderEngine {}
+
+impl RenderEngine {
+    fn clear(mut b: impl RenderBuffer) {
+        for i in 0..b.buffer().len() {
+            b.buffer_mut()[i] = RGB8::default();
+        }
+    }
+
+    fn render(
+        uniforms: &ShaderInput,
+        f: fn(fragCoord: Vec2, &ShaderInput) -> RGB8,
+        b: &mut impl RenderBuffer,
+    ) {
+        for x in 0..b.size().x as u32 {
+            for y in 0..b.size().y as u32 {
+                b.set_pixel(x, y, f(Vec2::new(x as f32, y as f32), uniforms));
             }
         }
     }
@@ -78,7 +118,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     // Camera
     commands.spawn(Camera2dBundle::default());
 
-    commands.insert_resource(RenderEngine::new());
+    commands.init_resource::<LEDRenderBuffer>();
 
     let window = windows.single();
     let width = window.width();
@@ -125,7 +165,7 @@ struct ShaderInput {
     iTimeDelta: f32,
 }
 
-fn update_offscreen_render(time: Res<Time>, mut render_engine: ResMut<RenderEngine>) {
+fn update_offscreen_render(time: Res<Time>, mut b: ResMut<LEDRenderBuffer>) {
     let uniforms = ShaderInput {
         iResolution: Vec3::new(NUM_DROP as f32, LEDS_PER_DROP as f32, 0.0),
         iTime: time.elapsed_seconds(),
@@ -133,15 +173,15 @@ fn update_offscreen_render(time: Res<Time>, mut render_engine: ResMut<RenderEngi
     };
 
     //render_engine.render(&uniforms, rainbow);
-    render_engine.render(&uniforms, hypnotic_rectangles);
+    RenderEngine::render(&uniforms, rainbow, &mut b.buffer);
 }
 
-fn update_pixels(render_engine: ResMut<RenderEngine>, mut query: Query<(&Pixel, &mut Sprite)>) {
+fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
     for (pixel, mut sprite) in query.iter_mut() {
         let x = pixel.index / LEDS_PER_DROP;
         let y = pixel.index % LEDS_PER_DROP;
 
-        let color = render_engine.get_pixel(x, y);
+        let color = b.buffer.get_pixel(x, y);
         sprite.color = Color::rgb(
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
