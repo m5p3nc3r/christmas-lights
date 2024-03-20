@@ -57,10 +57,10 @@ impl RenderEngine {
         self.buffer[index as usize]
     }
 
-    fn render(&mut self, time: f32, f: fn(u32, u32, f32) -> RGB8) {
+    fn render(&mut self, uniforms: &ShaderInput, f: fn(fragCoord: Vec2, &ShaderInput) -> RGB8) {
         for x in 0..NUM_DROP {
             for y in 0..LEDS_PER_DROP {
-                self.set_pixel(x, y, f(x, y, time));
+                self.set_pixel(x, y, f(Vec2::new(x as f32, y as f32), uniforms));
             }
         }
     }
@@ -119,25 +119,21 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     }
 }
 
-fn rainbow(x: u32, y: u32, time: f32) -> RGB8 {
-    let offset = y as f32;
-
-    let t = time + offset / 15.0;
-
-    let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
-    let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
-    let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
-
-    RGB8 {
-        r: (r * 255.0) as u8,
-        g: (g * 255.0) as u8,
-        b: (b * 255.0) as u8,
-    }
+struct ShaderInput {
+    iResolution: Vec3,
+    iTime: f32,
+    iTimeDelta: f32,
 }
 
 fn update_offscreen_render(time: Res<Time>, mut render_engine: ResMut<RenderEngine>) {
-    let time_seconds = time.elapsed_seconds();
-    render_engine.render(time_seconds, rainbow);
+    let uniforms = ShaderInput {
+        iResolution: Vec3::new(NUM_DROP as f32, LEDS_PER_DROP as f32, 0.0),
+        iTime: time.elapsed_seconds(),
+        iTimeDelta: time.delta_seconds(),
+    };
+
+    //render_engine.render(&uniforms, rainbow);
+    render_engine.render(&uniforms, hypnotic_rectangles);
 }
 
 fn update_pixels(render_engine: ResMut<RenderEngine>, mut query: Query<(&Pixel, &mut Sprite)>) {
@@ -153,3 +149,62 @@ fn update_pixels(render_engine: ResMut<RenderEngine>, mut query: Query<(&Pixel, 
         );
     }
 }
+
+fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+    let offset = fragCoord.y;
+
+    let t = uniforms.iTime + offset / 15.0;
+
+    let r = ((t * 2.0).sin() * 0.5 + 0.5) as f32;
+    let g = ((t * 0.7).sin() * 0.5 + 0.5) as f32;
+    let b = ((t * 1.3).sin() * 0.5 + 0.5) as f32;
+
+    RGB8 {
+        r: (r * 255.0) as u8,
+        g: (g * 255.0) as u8,
+        b: (b * 255.0) as u8,
+    }
+}
+
+// https://www.shadertoy.com/view/lsX3zr
+fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+    // vec2 center = vec2(0.5,0.5);
+    // float speed = 0.005;
+
+    // void mainImage( out vec4 fragColor, in vec2 fragCoord )
+    // {
+    // float invAr = iResolution.y / iResolution.x;
+    let invAr = uniforms.iResolution.x / uniforms.iResolution.y;
+    // 	vec2 uv = fragCoord.xy / iResolution.xy;
+    let uv = Vec2::new(fragCoord.x, fragCoord.y)
+        / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
+
+    // 	float x = (center.x-uv.x);
+    let x = (0.5 - uv.x);
+    // 	float y = (center.y-uv.y) * invAr;
+    let y = (0.5 - uv.y) * invAr;
+
+    // 	float anm = cos(iTime*0.2);
+    let anm = (uniforms.iTime * 0.2).cos();
+
+    // 	//float r = -(x*x     + y*y)		* anm;  // Circles
+    // 	//float r = -(x*x*x   + y*y*y)		* anm;  // Cubic Shape
+    // 	float r   = -(x*x*x*x + y*y*y*y)	* anm;  // Rectangles
+    let r = -(x * x * x * x + y * y * y * y) * anm;
+    // 	float z   = 1.0 + 0.5*sin((r+iTime*speed)/0.0015);
+    let z = 1.0 + 0.5 * ((r + uniforms.iTime * 0.005) / 0.0015).sin();
+
+    // 	//Color
+    // 	vec3 col = vec4(uv,0.5+0.5*sin(iTime),1.0).xyz;
+    let col = Vec3::new(uv.x, uv.y, 0.5 + 0.5 * uniforms.iTime.sin());
+    // 	vec3 texcol = vec3(z,z,z);
+    let texcol = Vec3::splat(z);
+
+    // 	fragColor = vec4(col*texcol,1.0);
+    RGB8 {
+        r: (col.x * texcol.x * 255.0) as u8,
+        g: (col.y * texcol.y * 255.0) as u8,
+        b: (col.z * texcol.z * 255.0) as u8,
+    }
+}
+// }
