@@ -4,6 +4,8 @@ pub use glam::f32::Vec2;
 pub use glam::f32::Vec3;
 pub mod shaders;
 
+use shaders::ShaderPass;
+
 // TODO: Replace with crates.io colour library
 #[derive(Clone, Copy, Default)]
 pub struct RGB8 {
@@ -41,17 +43,30 @@ pub struct ShaderInput {
     pub iTimeDelta: f32,
 }
 
-pub struct RenderEngine {}
+#[derive(Default)]
+pub struct RenderEngine<'a> {
+    shader: Option<&'a dyn ShaderPass>,
+}
 
-impl RenderEngine {
-    pub fn render(
-        uniforms: &ShaderInput,
-        f: fn(fragCoord: Vec2, &ShaderInput) -> RGB8,
-        b: &mut impl RenderBuffer,
-    ) {
-        for x in 0..b.size().x as u32 {
-            for y in 0..b.size().y as u32 {
-                b.set_pixel(x, y, f(Vec2::new(x as f32, y as f32), uniforms));
+impl<'a> RenderEngine<'a> {
+    pub fn new() -> Self {
+        Self { shader: None }
+    }
+
+    pub fn set_shader(&mut self, shader: &'a dyn ShaderPass) {
+        self.shader = Some(shader);
+    }
+
+    pub fn render(&self, uniforms: &ShaderInput, b: &mut impl RenderBuffer) {
+        if let Some(shader) = self.shader {
+            for x in 0..b.size().x as u32 {
+                for y in 0..b.size().y as u32 {
+                    b.set_pixel(
+                        x,
+                        y,
+                        shader.mainImage(Vec2::new(x as f32, y as f32), uniforms),
+                    );
+                }
             }
         }
     }

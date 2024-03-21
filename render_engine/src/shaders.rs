@@ -4,6 +4,18 @@ use crate::ShaderInput;
 use crate::RGB8;
 use crate::{Vec2, Vec3};
 
+pub trait ShaderPass {
+    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8;
+}
+
+pub struct Rainbow {}
+
+impl ShaderPass for Rainbow {
+    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+        rainbow(fragCoord, uniforms)
+    }
+}
+
 pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     let offset = fragCoord.y;
 
@@ -17,6 +29,18 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         r: (r * 255.0) as u8,
         g: (g * 255.0) as u8,
         b: (b * 255.0) as u8,
+    }
+}
+
+pub struct HypnoticRectanges {}
+
+impl ShaderPass for HypnoticRectanges {
+    fn mainImage(
+        &self,
+        /*fragColor: &mut RGB8,*/ fragCoord: Vec2,
+        uniforms: &ShaderInput,
+    ) -> RGB8 {
+        hypnotic_rectangles(fragCoord, uniforms)
     }
 }
 

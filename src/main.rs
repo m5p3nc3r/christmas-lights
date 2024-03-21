@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use render_engine::{shaders, RenderBuffer, RenderEngine, ShaderInput, RGB8};
+use render_engine::{
+    shaders::{HypnoticRectanges, Rainbow},
+    RenderBuffer, RenderEngine, ShaderInput, RGB8,
+};
 
 //
 const NUM_DROP: u32 = 50;
@@ -51,11 +54,22 @@ impl Default for LEDRenderBuffer {
     }
 }
 
+#[derive(Resource, Default)]
+struct LEDRenderEngine {
+    engine: RenderEngine<'static>,
+}
+
+unsafe impl Send for LEDRenderEngine {}
+unsafe impl Sync for LEDRenderEngine {}
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_systems(Startup, setup)
-        .add_systems(FixedUpdate, (update_offscreen_render, update_pixels))
+        .add_systems(Startup, (setup, set_default_shader.after(setup)))
+        .add_systems(
+            FixedUpdate,
+            (keyboard_input, update_offscreen_render, update_pixels),
+        )
         .run();
 }
 
@@ -64,6 +78,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     commands.spawn(Camera2dBundle::default());
 
     commands.init_resource::<LEDRenderBuffer>();
+    commands.init_resource::<LEDRenderEngine>();
 
     let window = windows.single();
     let width = window.width();
@@ -104,15 +119,34 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     }
 }
 
-fn update_offscreen_render(time: Res<Time>, mut b: ResMut<LEDRenderBuffer>) {
+fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
+    //    r.engine.set_shader(&Hypnotic_Rectanges {});
+    r.engine.set_shader(&Rainbow {});
+}
+
+fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
+    if keys.just_pressed(KeyCode::Digit1) {
+        r.engine.set_shader(&Rainbow {});
+    } else if keys.just_pressed(KeyCode::Digit2) {
+        r.engine.set_shader(&HypnoticRectanges {});
+    }
+}
+
+fn update_offscreen_render(
+    time: Res<Time>,
+    r: Res<LEDRenderEngine>,
+    mut b: ResMut<LEDRenderBuffer>,
+) {
     let uniforms = ShaderInput {
         iResolution: b.buffer.size().extend(0.0),
         iTime: time.elapsed_seconds(),
         iTimeDelta: time.delta_seconds(),
     };
 
+    //    r.engine.set_shader(&shaders::hypnotic_rectangles);
+    r.engine.render(&uniforms, &mut b.buffer);
     //    RenderEngine::render(&uniforms, rainbow, &mut b.buffer);
-    RenderEngine::render(&uniforms, shaders::hypnotic_rectangles, &mut b.buffer);
+    //    RenderEngine::render(&uniforms, shaders::hypnotic_rectangles, &mut b.buffer);
 }
 
 fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
