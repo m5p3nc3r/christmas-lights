@@ -126,15 +126,16 @@ fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
-        r.engine.set_shader(&Rainbow {});
+        r.engine.set_transition_to_shader(&Rainbow {}, 1.0);
     } else if keys.just_pressed(KeyCode::Digit2) {
-        r.engine.set_shader(&HypnoticRectanges {});
+        r.engine
+            .set_transition_to_shader(&HypnoticRectanges {}, 1.0);
     }
 }
 
 fn update_offscreen_render(
     time: Res<Time>,
-    r: Res<LEDRenderEngine>,
+    mut r: ResMut<LEDRenderEngine>,
     mut b: ResMut<LEDRenderBuffer>,
 ) {
     let uniforms = ShaderInput {
@@ -145,8 +146,6 @@ fn update_offscreen_render(
 
     //    r.engine.set_shader(&shaders::hypnotic_rectangles);
     r.engine.render(&uniforms, &mut b.buffer);
-    //    RenderEngine::render(&uniforms, rainbow, &mut b.buffer);
-    //    RenderEngine::render(&uniforms, shaders::hypnotic_rectangles, &mut b.buffer);
 }
 
 fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
