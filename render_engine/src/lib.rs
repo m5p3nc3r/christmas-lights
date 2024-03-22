@@ -68,27 +68,18 @@ impl<'a> RenderEngine<'a> {
         self.transition_duration = duration;
     }
 
-    pub fn render(&mut self, uniforms: &ShaderInput, b: &mut impl RenderBuffer) {
+    pub fn render(&mut self, u: &ShaderInput, b: &mut impl RenderBuffer) {
         if let Some(shader) = self.shader {
             for x in 0..b.size().x as u32 {
                 for y in 0..b.size().y as u32 {
-                    b.set_pixel(
-                        x,
-                        y,
-                        shader.mainImage(Vec2::new(x as f32, y as f32), uniforms),
-                    );
+                    b.set_pixel(x, y, shader.mainImage(Vec2::new(x as f32, y as f32), u));
                 }
             }
         }
         if let Some(transition_to_shader) = self.transition_to_shader {
-            self.blend(
-                uniforms,
-                b,
-                transition_to_shader,
-                1.0 - self.transition_duration,
-            );
-            self.transition_duration -= 0.01;
-            if (self.transition_duration <= 0.0) {
+            self.blend(u, b, transition_to_shader, 1.0 - self.transition_duration);
+            self.transition_duration -= 0.001;
+            if self.transition_duration <= 0.0 {
                 self.shader = self.transition_to_shader;
                 self.transition_to_shader = None;
             }
@@ -100,20 +91,20 @@ impl<'a> RenderEngine<'a> {
         uniforms: &ShaderInput,
         b: &mut impl RenderBuffer,
         s: &dyn ShaderPass,
-        fraction: f32,
+        part_b: f32,
     ) {
-        if let Some(shader) = self.shader {
-            for x in 0..b.size().x as u32 {
-                for y in 0..b.size().y as u32 {
-                    let color = s.mainImage(Vec2::new(x as f32, y as f32), uniforms);
-                    let old_color = b.get_pixel(x, y);
-                    let new_color = RGB8 {
-                        r: (old_color.r as f32 * 1.0 - fraction + color.r as f32 * fraction) as u8,
-                        g: (old_color.g as f32 * 1.0 - fraction + color.g as f32 * fraction) as u8,
-                        b: (old_color.b as f32 * 1.0 - fraction + color.b as f32 * fraction) as u8,
-                    };
-                    b.set_pixel(x, y, new_color);
-                }
+        let part_a = 1.0 - part_b;
+
+        for x in 0..b.size().x as u32 {
+            for y in 0..b.size().y as u32 {
+                let color = s.mainImage(Vec2::new(x as f32, y as f32), uniforms);
+                let old_color = b.get_pixel(x, y);
+                let new_color = RGB8 {
+                    r: (old_color.r as f32 * part_a + color.r as f32 * part_b) as u8,
+                    g: (old_color.g as f32 * part_a + color.g as f32 * part_b) as u8,
+                    b: (old_color.b as f32 * part_a + color.b as f32 * part_b) as u8,
+                };
+                b.set_pixel(x, y, new_color);
             }
         }
     }
