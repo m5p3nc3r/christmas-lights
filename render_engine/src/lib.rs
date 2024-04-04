@@ -106,18 +106,15 @@ impl RenderEngine {
     pub fn render(&mut self, u: &ShaderInput, b: &mut impl RenderBuffer) {
         if let Some(shader) = &self.shader {
             let s = self.shaders.get_shader(shader);
-            s.step();
-            for x in 0..b.size().x as u32 {
-                for y in 0..b.size().y as u32 {
-                    b.set_pixel(x, y, s.mainImage(Vec2::new(x as f32, y as f32), u));
-                }
-            }
+            Self::blend(u, b, s, 1.0);
         }
         if let Some(transition_to_shader) = &self.transition_to_shader {
             let s: &mut dyn ShaderPass = self.shaders.get_shader(transition_to_shader);
-
             Self::blend(u, b, s, 1.0 - self.transition_duration);
-            self.transition_duration -= 0.001;
+
+            // TODO: Calculate duration based on frame rate
+            self.transition_duration -= 0.04;
+            // Replace shader with transition_to_shader if transition_duration is 0
             if self.transition_duration <= 0.0 {
                 self.shader = self.transition_to_shader.take();
                 self.transition_to_shader = None;
@@ -131,6 +128,8 @@ impl RenderEngine {
         s: &mut dyn ShaderPass,
         part_b: f32,
     ) {
+        s.step();
+
         let part_a = 1.0 - part_b;
 
         for x in 0..b.size().x as u32 {

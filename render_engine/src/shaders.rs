@@ -100,8 +100,9 @@ impl Snow {
     pub fn new() -> Self {
         let mut rng = SmallRng::seed_from_u64(0);
         Self {
-            snowflakes: [(rng.gen_range(0.0..=1.0), rng.gen_range(0.0..=1.0)); 100],
-            //            snowflakes: [(0.0, 0.0); 100],
+            snowflakes: core::array::from_fn(|_| {
+                (rng.gen_range(0.0..=1.0), rng.gen_range(0.0..=1.0))
+            }),
         }
     }
 }
