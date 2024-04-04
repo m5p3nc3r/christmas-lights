@@ -5,6 +5,7 @@ pub use glam::f32::Vec3;
 pub mod shaders;
 
 use shaders::ShaderPass;
+use shaders::{HypnoticRectanges, Rainbow, Snow};
 
 // TODO: Replace with crates.io colour library
 #[derive(Clone, Copy, Default)]
@@ -43,54 +44,91 @@ pub struct ShaderInput {
     pub iTimeDelta: f32,
 }
 
+pub enum Shader {
+    Rainbow,
+    HypnoticRectangles,
+    Snow,
+}
+
+struct Shaders {
+    rainbow: Rainbow,
+    hypnotic_rectangles: HypnoticRectanges,
+    snow: Snow,
+}
+
+impl Default for Shaders {
+    fn default() -> Self {
+        Self {
+            rainbow: Rainbow {},
+            hypnotic_rectangles: HypnoticRectanges {},
+            snow: Snow::default(),
+        }
+    }
+}
+
+impl Shaders {
+    fn get_shader(&mut self, shader: &Shader) -> &mut dyn ShaderPass {
+        match shader {
+            Shader::Rainbow => &mut self.rainbow,
+            Shader::HypnoticRectangles => &mut self.hypnotic_rectangles,
+            Shader::Snow => &mut self.snow,
+        }
+    }
+}
+
 #[derive(Default)]
-pub struct RenderEngine<'a> {
-    shader: Option<&'a dyn ShaderPass>,
-    transition_to_shader: Option<&'a dyn ShaderPass>,
+pub struct RenderEngine {
+    shaders: Shaders,
+    shader: Option<Shader>,
+    transition_to_shader: Option<Shader>,
     transition_duration: f32,
 }
 
-impl<'a> RenderEngine<'a> {
+impl RenderEngine {
     pub fn new() -> Self {
         Self {
+            shaders: Shaders::default(),
             shader: None,
             transition_to_shader: None,
             transition_duration: 0.0,
         }
     }
 
-    pub fn set_shader(&mut self, shader: &'a dyn ShaderPass) {
+    pub fn set_shader(&mut self, shader: Shader) {
         self.shader = Some(shader);
     }
 
-    pub fn set_transition_to_shader(&mut self, shader: &'a dyn ShaderPass, duration: f32) {
+    pub fn set_transition_to_shader(&mut self, shader: Shader, duration: f32) {
         self.transition_to_shader = Some(shader);
         self.transition_duration = duration;
     }
 
     pub fn render(&mut self, u: &ShaderInput, b: &mut impl RenderBuffer) {
-        if let Some(shader) = self.shader {
+        if let Some(shader) = &self.shader {
+            let s = self.shaders.get_shader(shader);
+            s.step();
             for x in 0..b.size().x as u32 {
                 for y in 0..b.size().y as u32 {
-                    b.set_pixel(x, y, shader.mainImage(Vec2::new(x as f32, y as f32), u));
+                    b.set_pixel(x, y, s.mainImage(Vec2::new(x as f32, y as f32), u));
                 }
             }
         }
-        if let Some(transition_to_shader) = self.transition_to_shader {
-            self.blend(u, b, transition_to_shader, 1.0 - self.transition_duration);
+        if let Some(transition_to_shader) = &self.transition_to_shader {
+            let s: &mut dyn ShaderPass = self.shaders.get_shader(transition_to_shader);
+
+            Self::blend(u, b, s, 1.0 - self.transition_duration);
             self.transition_duration -= 0.001;
             if self.transition_duration <= 0.0 {
-                self.shader = self.transition_to_shader;
+                self.shader = self.transition_to_shader.take();
                 self.transition_to_shader = None;
             }
         }
     }
 
     pub fn blend(
-        &self,
         uniforms: &ShaderInput,
         b: &mut impl RenderBuffer,
-        s: &dyn ShaderPass,
+        s: &mut dyn ShaderPass,
         part_b: f32,
     ) {
         let part_a = 1.0 - part_b;
@@ -108,15 +146,4 @@ impl<'a> RenderEngine<'a> {
             }
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-
-    // #[test]
-    // fn it_works() {
-    //     let result = add(2, 2);
-    //     assert_eq!(result, 4);
-    // }
 }

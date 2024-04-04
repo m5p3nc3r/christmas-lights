@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use render_engine::{
-    shaders::{HypnoticRectanges, Rainbow},
-    RenderBuffer, RenderEngine, ShaderInput, RGB8,
-};
+use render_engine::{RenderBuffer, RenderEngine, Shader, ShaderInput, RGB8};
 
 //
 const NUM_DROP: u32 = 50;
@@ -56,7 +53,7 @@ impl Default for LEDRenderBuffer {
 
 #[derive(Resource, Default)]
 struct LEDRenderEngine {
-    engine: RenderEngine<'static>,
+    engine: RenderEngine,
 }
 
 unsafe impl Send for LEDRenderEngine {}
@@ -120,16 +117,15 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 }
 
 fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
-    //    r.engine.set_shader(&Hypnotic_Rectanges {});
-    r.engine.set_shader(&Rainbow {});
+    r.engine.set_shader(Shader::Snow);
 }
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
-        r.engine.set_transition_to_shader(&Rainbow {}, 1.0);
+        r.engine.set_transition_to_shader(Shader::Rainbow, 1.0);
     } else if keys.just_pressed(KeyCode::Digit2) {
         r.engine
-            .set_transition_to_shader(&HypnoticRectanges {}, 1.0);
+            .set_transition_to_shader(Shader::HypnoticRectangles, 1.0);
     }
 }
 

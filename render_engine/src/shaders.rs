@@ -5,6 +5,7 @@ use crate::RGB8;
 use crate::{Vec2, Vec3};
 
 pub trait ShaderPass {
+    fn step(&mut self) {}
     fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8;
 }
 
@@ -35,11 +36,7 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
 pub struct HypnoticRectanges {}
 
 impl ShaderPass for HypnoticRectanges {
-    fn mainImage(
-        &self,
-        /*fragColor: &mut RGB8,*/ fragCoord: Vec2,
-        uniforms: &ShaderInput,
-    ) -> RGB8 {
+    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         hypnotic_rectangles(fragCoord, uniforms)
     }
 }
@@ -86,3 +83,101 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     }
 }
 // }
+
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
+
+pub struct Snow {
+    snowflakes: [(f32, f32); 100], // Static array of 100 snowflakes
+}
+
+impl Default for Snow {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl Snow {
+    pub fn new() -> Self {
+        let mut rng = SmallRng::seed_from_u64(0);
+        Self {
+            snowflakes: [(rng.gen_range(0.0..=1.0), rng.gen_range(0.0..=1.0)); 100],
+            //            snowflakes: [(0.0, 0.0); 100],
+        }
+    }
+}
+
+impl ShaderPass for Snow {
+    fn step(&mut self) {
+        // Move each snowflake down by a small amount
+        for i in 0..100 {
+            println!("Snowflake: {:?}", self.snowflakes[i]);
+            self.snowflakes[i].1 -= 0.01;
+            if self.snowflakes[i].1 < 0.0 {
+                self.snowflakes[i].1 += 1.0;
+            }
+        }
+    }
+
+    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+        let uv = Vec2::new(fragCoord.x, fragCoord.y)
+            / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
+
+        // If the current pixel is close to a snowflake, draw a snowflake
+        if self.snowflakes.iter().any(|(x, y)| {
+            let dx = fragCoord.x - x * uv.x;
+            let dy = fragCoord.y - y * uv.y;
+            dx * dx + dy * dy < 0.01
+        }) {
+            RGB8 {
+                r: 255,
+                g: 255,
+                b: 255,
+            }
+        } else {
+            RGB8 { r: 0, g: 0, b: 0 }
+        }
+
+        // // Calculate the "height" of the snowflake based on time and the y-coordinate
+        // let height = ((fragCoord.y - uniforms.iTime * 10.0) % uniforms.iResolution.y)
+        //     / uniforms.iResolution.y;
+
+        // // Generate multiple noise values for each y-coordinate
+        // let mut max_noise: f32 = 0.0;
+        // for i in 0..10 {
+        //     // Generate random noise based on the x-coordinate, height, and i
+        //     let noise =
+        //         ((fragCoord.x + (height + i as f32 * 0.1) * 43_758.545).sin() * 43_758.545).fract();
+        //     max_noise = max_noise.max(noise);
+        // }
+
+        // // If the maximum noise is above a threshold, draw a snowflake
+        // if max_noise > 0.98 {
+        //     RGB8 {
+        //         r: 255,
+        //         g: 255,
+        //         b: 255,
+        //     }
+        // } else {
+        //     RGB8 { r: 0, g: 0, b: 0 }
+        // }
+    }
+
+    // fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+    //     if fragCoord.x == 0.0 {
+    //         //            let v = (uniforms.iTime.rem(24.0) * 10.0) as u8;
+    //         let v = uniforms.iTime.rem(uniforms.iResolution.y).round();
+    //         if fragCoord.y == v {
+    //             return RGB8 {
+    //                 r: 255,
+    //                 g: 255,
+    //                 b: 255,
+    //             };
+    //         }
+    //     }
+    //     return RGB8 {
+    //         r: 128,
+    //         g: 128,
+    //         b: 128,
+    //     };
+    // }
+}
