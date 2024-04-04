@@ -111,23 +111,19 @@ impl ShaderPass for Snow {
     fn step(&mut self) {
         // Move each snowflake down by a small amount
         for i in 0..100 {
-            println!("Snowflake: {:?}", self.snowflakes[i]);
-            self.snowflakes[i].1 -= 0.01;
-            if self.snowflakes[i].1 < 0.0 {
-                self.snowflakes[i].1 += 1.0;
+            self.snowflakes[i].1 += 0.01;
+            if self.snowflakes[i].1 > 1.0 {
+                self.snowflakes[i].1 -= 1.0;
             }
         }
     }
 
     fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-        let uv = Vec2::new(fragCoord.x, fragCoord.y)
-            / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
-
         // If the current pixel is close to a snowflake, draw a snowflake
         if self.snowflakes.iter().any(|(x, y)| {
-            let dx = fragCoord.x - x * uv.x;
-            let dy = fragCoord.y - y * uv.y;
-            dx * dx + dy * dy < 0.01
+            let dx = fragCoord.x - x * uniforms.iResolution.x;
+            let dy = fragCoord.y - y * uniforms.iResolution.y;
+            dx * dx + dy * dy < 1.0
         }) {
             RGB8 {
                 r: 255,
