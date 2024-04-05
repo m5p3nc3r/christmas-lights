@@ -44,7 +44,9 @@ impl ShaderPass for HypnoticRectanges {
 // https://www.shadertoy.com/view/lsX3zr
 pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     // vec2 center = vec2(0.5,0.5);
+    const CENTER: Vec2 = Vec2::splat(0.5);
     // float speed = 0.005;
+    const SPEED: f32 = 0.005;
 
     // void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // {
@@ -55,19 +57,21 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         / Vec2::new(uniforms.iResolution.x, uniforms.iResolution.y);
 
     // 	float x = (center.x-uv.x);
-    let x = 0.5 - uv.x;
+    let x = CENTER.x - uv.x;
     // 	float y = (center.y-uv.y) * invAr;
-    let y = (0.5 - uv.y) * invAr;
+    let y = (CENTER.y - uv.y) * invAr;
 
     // 	float anm = cos(iTime*0.2);
     let anm = (uniforms.iTime * 0.2).cos();
 
     // 	//float r = -(x*x     + y*y)		* anm;  // Circles
+    //let r = -(x * x + y * y) * anm; // Circles
     // 	//float r = -(x*x*x   + y*y*y)		* anm;  // Cubic Shape
+    //let r = -(x * x * x + y * y * y) * anm; // Cubic Shape
     // 	float r   = -(x*x*x*x + y*y*y*y)	* anm;  // Rectangles
     let r = -(x * x * x * x + y * y * y * y) * anm;
     // 	float z   = 1.0 + 0.5*sin((r+iTime*speed)/0.0015);
-    let z = 1.0 + 0.5 * ((r + uniforms.iTime * 0.005) / 0.0015).sin();
+    let z = 1.0 + 0.5 * ((r + uniforms.iTime * SPEED) / 0.0015).sin();
 
     // 	//Color
     // 	vec3 col = vec4(uv,0.5+0.5*sin(iTime),1.0).xyz;
@@ -89,6 +93,7 @@ use rand::{Rng, SeedableRng};
 
 pub struct Snow {
     snowflakes: [(f32, f32); 100], // Static array of 100 snowflakes
+    rng: SmallRng,
 }
 
 impl Default for Snow {
@@ -103,6 +108,7 @@ impl Snow {
             snowflakes: core::array::from_fn(|_| {
                 (rng.gen_range(0.0..=1.0), rng.gen_range(0.0..=1.0))
             }),
+            rng,
         }
     }
 }
@@ -114,6 +120,7 @@ impl ShaderPass for Snow {
             self.snowflakes[i].1 += 0.01;
             if self.snowflakes[i].1 > 1.0 {
                 self.snowflakes[i].1 -= 1.0;
+                self.snowflakes[i].0 = self.rng.gen_range(0.0..=1.0);
             }
         }
     }
@@ -133,48 +140,5 @@ impl ShaderPass for Snow {
         } else {
             RGB8 { r: 0, g: 0, b: 0 }
         }
-
-        // // Calculate the "height" of the snowflake based on time and the y-coordinate
-        // let height = ((fragCoord.y - uniforms.iTime * 10.0) % uniforms.iResolution.y)
-        //     / uniforms.iResolution.y;
-
-        // // Generate multiple noise values for each y-coordinate
-        // let mut max_noise: f32 = 0.0;
-        // for i in 0..10 {
-        //     // Generate random noise based on the x-coordinate, height, and i
-        //     let noise =
-        //         ((fragCoord.x + (height + i as f32 * 0.1) * 43_758.545).sin() * 43_758.545).fract();
-        //     max_noise = max_noise.max(noise);
-        // }
-
-        // // If the maximum noise is above a threshold, draw a snowflake
-        // if max_noise > 0.98 {
-        //     RGB8 {
-        //         r: 255,
-        //         g: 255,
-        //         b: 255,
-        //     }
-        // } else {
-        //     RGB8 { r: 0, g: 0, b: 0 }
-        // }
     }
-
-    // fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-    //     if fragCoord.x == 0.0 {
-    //         //            let v = (uniforms.iTime.rem(24.0) * 10.0) as u8;
-    //         let v = uniforms.iTime.rem(uniforms.iResolution.y).round();
-    //         if fragCoord.y == v {
-    //             return RGB8 {
-    //                 r: 255,
-    //                 g: 255,
-    //                 b: 255,
-    //             };
-    //         }
-    //     }
-    //     return RGB8 {
-    //         r: 128,
-    //         g: 128,
-    //         b: 128,
-    //     };
-    // }
 }

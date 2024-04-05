@@ -122,8 +122,10 @@ fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
-        r.engine.set_transition_to_shader(Shader::Rainbow, 1.0);
+        r.engine.set_transition_to_shader(Shader::Snow, 1.0);
     } else if keys.just_pressed(KeyCode::Digit2) {
+        r.engine.set_transition_to_shader(Shader::Rainbow, 1.0);
+    } else if keys.just_pressed(KeyCode::Digit3) {
         r.engine
             .set_transition_to_shader(Shader::HypnoticRectangles, 1.0);
     }
