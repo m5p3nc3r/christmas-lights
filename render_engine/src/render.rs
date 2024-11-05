@@ -5,10 +5,10 @@ use rand::{Rng, SeedableRng};
 use crate::{RenderBuffer, RGB8};
 
 
-trait Render {
+trait Render<const S: usize, const X: usize, const Y: usize> {
     fn step(&mut self);
     // TODO: Use Fixed for t and dt f32's
-    fn render(&self, t: f32, dt: f32, buffer: &mut impl RenderBuffer);
+    fn render(&self, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>);
 }
 
 
@@ -57,14 +57,14 @@ impl Sparkle {
     }
 }
 
-impl Render for Sparkle {
+impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle {
     fn step(&mut self) {
         for point in self.points.iter_mut() {
             point.phase = (point.phase + 1) % 255;
         }
     }
 
-    fn render(&self, _t: f32, _dt: f32, buffer: &mut impl RenderBuffer) {
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         for point in self.points.iter() {
             buffer.set_pixel(point.pos.x, point.pos.y, point.color);
         }

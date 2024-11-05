@@ -18,23 +18,7 @@ impl Pixel {
     }
 }
 
-struct Buffer50x24 {
-    buffer: [RGB8; NUM_DROP as usize * LEDS_PER_DROP as usize],
-}
-
-impl RenderBuffer for Buffer50x24 {
-    fn size(&self) -> render_engine::UVec2 {
-        render_engine::UVec2::new(NUM_DROP, LEDS_PER_DROP)
-    }
-
-    fn buffer(&self) -> &[RGB8] {
-        &self.buffer
-    }
-
-    fn buffer_mut(&mut self) -> &mut [RGB8] {
-        &mut self.buffer
-    }
-}
+type Buffer50x24 = RenderBuffer<{50 * 24}, 50, 24>;
 
 #[derive(Resource)]
 struct LEDRenderBuffer {
@@ -44,9 +28,7 @@ struct LEDRenderBuffer {
 impl Default for LEDRenderBuffer {
     fn default() -> Self {
         Self {
-            buffer: Buffer50x24 {
-                buffer: [RGB8::default(); NUM_DROP as usize * LEDS_PER_DROP as usize],
-            },
+            buffer: Buffer50x24::new()
         }
     }
 }

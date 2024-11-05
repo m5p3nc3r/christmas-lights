@@ -18,27 +18,50 @@ pub struct RGB8 {
     pub b: u8,
 }
 
-pub trait RenderBuffer {
-    fn size(&self) -> glam::u32::UVec2;
-    fn buffer(&self) -> &[RGB8];
-    fn buffer_mut(&mut self) -> &mut [RGB8];
+pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
+    size: UVec2,
+    buffer: [RGB8; S],
+}
 
-    fn clear(&mut self) {
+
+impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
+    pub fn new() -> Self {
+        assert!(X * Y == S);
+        Self {
+            size: glam::u32::UVec2::new(X as u32, Y as u32),
+            buffer: [RGB8::default(); S],
+        }
+    }
+
+    pub fn size(&self) -> UVec2 {
+        self.size
+    }
+
+    pub fn buffer(&self) -> &[RGB8] {
+        &self.buffer
+    }
+
+    pub fn buffer_mut(&mut self) -> &mut [RGB8] {
+        &mut self.buffer
+    }
+
+    pub fn clear(&mut self) {
         for i in 0..self.buffer().len() {
             self.buffer_mut()[i] = RGB8::default();
         }
     }
 
-    fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
+    pub fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
         let index = x + y * self.size().x as u32;
         self.buffer()[index as usize]
     }
 
-    fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
         let index = x + y * self.size().x as u32;
         self.buffer_mut()[index as usize] = color;
     }
 }
+
 
 #[allow(non_snake_case)]
 pub struct ShaderInput {
@@ -84,14 +107,14 @@ impl Shaders {
 }
 
 #[derive(Default)]
-pub struct RenderEngine {
+pub struct ShaderEngine {
     shaders: Shaders,
     shader: Option<Shader>,
     transition_to_shader: Option<Shader>,
     transition_duration: f32,
 }
 
-impl RenderEngine {
+impl ShaderEngine {
     pub fn new() -> Self {
         Self {
             shaders: Shaders::default(),
@@ -110,12 +133,14 @@ impl RenderEngine {
         self.transition_duration = duration;
     }
 
-    pub fn render(&mut self, t: f32, dt: f32, b: &mut impl RenderBuffer) {
+    pub fn render<const S: usize, const X: usize, const Y: usize>(&mut self, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
+        // Calculate the uniforms
         let u = ShaderInput {
             iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
             iTime: t,
             iTimeDelta: dt,
         };
+
         if let Some(shader) = &self.shader {
             let s = self.shaders.get_shader(shader);
             Self::blend(&u, b, s, 1.0);
@@ -134,9 +159,9 @@ impl RenderEngine {
         }
     }
 
-    pub fn blend(
+    pub fn blend<const S:usize, const X:usize, const Y:usize>(
         uniforms: &ShaderInput,
-        b: &mut impl RenderBuffer,
+        b: &mut RenderBuffer<S, X, Y>,
         s: &mut dyn ShaderPass,
         part_b: f32,
     ) {
