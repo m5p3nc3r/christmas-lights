@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use render_engine::{RenderBuffer, RenderEngine, Shader, RGB8};
+use render_engine::{RenderBuffer, ShaderEngine, Shader, RGB8};
 
 //
 const NUM_DROP: u32 = 50;
@@ -53,7 +53,7 @@ impl Default for LEDRenderBuffer {
 
 #[derive(Resource, Default)]
 struct LEDRenderEngine {
-    engine: RenderEngine,
+    engine: ShaderEngine,
 }
 
 unsafe impl Send for LEDRenderEngine {}

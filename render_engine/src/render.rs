@@ -7,7 +7,8 @@ use crate::{RenderBuffer, RGB8};
 
 trait Render {
     fn step(&mut self);
-    fn render(&self, buffer: &mut impl RenderBuffer);
+    // TODO: Use Fixed for t and dt f32's
+    fn render(&self, t: f32, dt: f32, buffer: &mut impl RenderBuffer);
 }
 
 
@@ -63,7 +64,7 @@ impl Render for Sparkle {
         }
     }
 
-    fn render(&self, buffer: &mut impl RenderBuffer) {
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut impl RenderBuffer) {
         for point in self.points.iter() {
             buffer.set_pixel(point.pos.x, point.pos.y, point.color);
         }
