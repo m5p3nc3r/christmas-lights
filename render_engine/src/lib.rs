@@ -2,7 +2,10 @@
 
 pub use glam::f32::Vec2;
 pub use glam::f32::Vec3;
+pub use glam::u32::UVec2;
+mod octograms;
 pub mod shaders;
+mod render;
 
 use shaders::ShaderPass;
 use shaders::{HypnoticRectanges, Rainbow, Snow};
@@ -16,7 +19,7 @@ pub struct RGB8 {
 }
 
 pub trait RenderBuffer {
-    fn size(&self) -> Vec2;
+    fn size(&self) -> glam::u32::UVec2;
     fn buffer(&self) -> &[RGB8];
     fn buffer_mut(&mut self) -> &mut [RGB8];
 
@@ -45,23 +48,26 @@ pub struct ShaderInput {
 }
 
 pub enum Shader {
+    Snow,
     Rainbow,
     HypnoticRectangles,
-    Snow,
+    Octograms,
 }
 
 struct Shaders {
+    snow: Snow,
     rainbow: Rainbow,
     hypnotic_rectangles: HypnoticRectanges,
-    snow: Snow,
+    octograms: octograms::Octograms,
 }
 
 impl Default for Shaders {
     fn default() -> Self {
         Self {
+            snow: Snow::default(),
             rainbow: Rainbow {},
             hypnotic_rectangles: HypnoticRectanges {},
-            snow: Snow::default(),
+            octograms: octograms::Octograms {},
         }
     }
 }
@@ -69,9 +75,10 @@ impl Default for Shaders {
 impl Shaders {
     fn get_shader(&mut self, shader: &Shader) -> &mut dyn ShaderPass {
         match shader {
+            Shader::Snow => &mut self.snow,
             Shader::Rainbow => &mut self.rainbow,
             Shader::HypnoticRectangles => &mut self.hypnotic_rectangles,
-            Shader::Snow => &mut self.snow,
+            Shader::Octograms => &mut self.octograms,
         }
     }
 }
@@ -103,14 +110,19 @@ impl RenderEngine {
         self.transition_duration = duration;
     }
 
-    pub fn render(&mut self, u: &ShaderInput, b: &mut impl RenderBuffer) {
+    pub fn render(&mut self, t: f32, dt: f32, b: &mut impl RenderBuffer) {
+        let u = ShaderInput {
+            iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
+            iTime: t,
+            iTimeDelta: dt,
+        };
         if let Some(shader) = &self.shader {
             let s = self.shaders.get_shader(shader);
-            Self::blend(u, b, s, 1.0);
+            Self::blend(&u, b, s, 1.0);
         }
         if let Some(transition_to_shader) = &self.transition_to_shader {
             let s: &mut dyn ShaderPass = self.shaders.get_shader(transition_to_shader);
-            Self::blend(u, b, s, 1.0 - self.transition_duration);
+            Self::blend(&u, b, s, 1.0 - self.transition_duration);
 
             // TODO: Calculate duration based on frame rate
             self.transition_duration -= 0.04;

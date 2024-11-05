@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use render_engine::{RenderBuffer, RenderEngine, Shader, ShaderInput, RGB8};
+use render_engine::{RenderBuffer, RenderEngine, Shader, RGB8};
 
 //
 const NUM_DROP: u32 = 50;
@@ -23,8 +23,8 @@ struct Buffer50x24 {
 }
 
 impl RenderBuffer for Buffer50x24 {
-    fn size(&self) -> render_engine::Vec2 {
-        render_engine::Vec2::new(NUM_DROP as f32, LEDS_PER_DROP as f32)
+    fn size(&self) -> render_engine::UVec2 {
+        render_engine::UVec2::new(NUM_DROP, LEDS_PER_DROP)
     }
 
     fn buffer(&self) -> &[RGB8] {
@@ -117,7 +117,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 }
 
 fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
-    r.engine.set_shader(Shader::Snow);
+    r.engine.set_shader(Shader::Octograms);
 }
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
@@ -136,14 +136,7 @@ fn update_offscreen_render(
     mut r: ResMut<LEDRenderEngine>,
     mut b: ResMut<LEDRenderBuffer>,
 ) {
-    let uniforms = ShaderInput {
-        iResolution: b.buffer.size().extend(0.0),
-        iTime: time.elapsed_seconds(),
-        iTimeDelta: time.delta_seconds(),
-    };
-
-    //    r.engine.set_shader(&shaders::hypnotic_rectangles);
-    r.engine.render(&uniforms, &mut b.buffer);
+    r.engine.render(time.elapsed_seconds(), time.delta_seconds(), &mut b.buffer);
 }
 
 fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
