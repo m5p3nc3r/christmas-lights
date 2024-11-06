@@ -2,17 +2,10 @@
 
 use glam::{Mat3, Vec2, Vec3, Vec3Swizzles};
 
-use crate::{shaders::ShaderPass, ShaderInput, RGB8};
+use crate::{ShaderInput, RGB8};
 
-pub struct Octograms {}
 
-impl ShaderPass for Octograms {
-    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-        octograms(fragCoord, uniforms)
-    }
-}
-
-fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+pub fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     // precision highp float;
 
     // float gTime = 0.2;
@@ -67,7 +60,7 @@ fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         // 	pos = pos_origin;
         pos = pos_origin;
         // 	pos .y -=sin(gTime * 0.4) * 2.5;
-        pos = pos - Vec3::new(0.0, gTime.sin() * 2.5, 0.0);
+        pos -= Vec3::new(0.0, gTime.sin() * 2.5, 0.0);
         // 	pos.xy *=   rot(.8);
         pos = /*pos **/ rot(0.8) * pos;
         // 	float box2 = box(pos,2. - abs(sin(gTime * 0.4)) * 1.5);
@@ -75,7 +68,7 @@ fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         // 	pos = pos_origin;
         pos = pos_origin;
         // 	pos .x +=sin(gTime * 0.4) * 2.5;
-        pos = pos + Vec3::new(gTime.sin() * 2.5, 0.0, 0.0);
+        pos += Vec3::new(gTime.sin() * 2.5, 0.0, 0.0);
         // 	pos.xy *=   rot(.8);
         pos = /*pos **/ rot(0.8) * pos;
         // 	float box3 = box(pos,2. - abs(sin(gTime * 0.4)) * 1.5);
@@ -83,7 +76,7 @@ fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         // 	pos = pos_origin;
         pos = pos_origin;
         // 	pos .x -=sin(gTime * 0.4) * 2.5;
-        pos = pos - Vec3::new(gTime.sin() * 2.5, 0.0, 0.0);
+        pos -= Vec3::new(gTime.sin() * 2.5, 0.0, 0.0);
         // 	pos.xy *=   rot(.8);
         pos = /*pos **/ rot(0.8) * pos;
         // 	float box4 = box(pos,2. - abs(sin(gTime * 0.4)) * 1.5);
@@ -140,7 +133,7 @@ fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     // 	float t = 0.1;
     let mut t = 0.1;
     // 	vec3 col = vec3(0.);
-    let mut col = Vec3::ZERO;
+    //let mut col = Vec3::ZERO;
     // 	float ac = 0.0;
     let mut ac = 0.0;
 
@@ -169,7 +162,7 @@ fn octograms(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     }
 
     // 	col = vec3(ac * 0.02);
-    col = Vec3::splat(ac * 0.02);
+    let mut col = Vec3::splat(ac * 0.02);
 
     // 	col +=vec3(0.,0.2 * abs(sin(iTime)),0.5 + sin(iTime) * 0.2);
     col += Vec3::new(

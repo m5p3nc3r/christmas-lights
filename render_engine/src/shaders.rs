@@ -4,19 +4,6 @@ use crate::ShaderInput;
 use crate::RGB8;
 use crate::{Vec2, Vec3};
 
-pub trait ShaderPass {
-    fn step(&mut self) {}
-    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8;
-}
-
-pub struct Rainbow {}
-
-impl ShaderPass for Rainbow {
-    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-        rainbow(fragCoord, uniforms)
-    }
-}
-
 pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     let offset = fragCoord.y;
 
@@ -30,14 +17,6 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         r: (r * 255.0) as u8,
         g: (g * 255.0) as u8,
         b: (b * 255.0) as u8,
-    }
-}
-
-pub struct HypnoticRectanges {}
-
-impl ShaderPass for HypnoticRectanges {
-    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-        hypnotic_rectangles(fragCoord, uniforms)
     }
 }
 
@@ -84,61 +63,5 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
         r: (col.x * texcol.x * 255.0) as u8,
         g: (col.y * texcol.y * 255.0) as u8,
         b: (col.z * texcol.z * 255.0) as u8,
-    }
-}
-// }
-
-use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
-
-pub struct Snow {
-    snowflakes: [(f32, f32); 100], // Static array of 100 snowflakes
-    rng: SmallRng,
-}
-
-impl Default for Snow {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-impl Snow {
-    pub fn new() -> Self {
-        let mut rng = SmallRng::seed_from_u64(0);
-        Self {
-            snowflakes: core::array::from_fn(|_| {
-                (rng.gen_range(0.0..=1.0), rng.gen_range(0.0..=1.0))
-            }),
-            rng,
-        }
-    }
-}
-
-impl ShaderPass for Snow {
-    fn step(&mut self) {
-        // Move each snowflake down by a small amount
-        for i in 0..100 {
-            self.snowflakes[i].1 += 0.01;
-            if self.snowflakes[i].1 > 1.0 {
-                self.snowflakes[i].1 -= 1.0;
-                self.snowflakes[i].0 = self.rng.gen_range(0.0..=1.0);
-            }
-        }
-    }
-
-    fn mainImage(&self, fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
-        // If the current pixel is close to a snowflake, draw a snowflake
-        if self.snowflakes.iter().any(|(x, y)| {
-            let dx = fragCoord.x - x * uniforms.iResolution.x;
-            let dy = fragCoord.y - y * uniforms.iResolution.y;
-            dx * dx + dy * dy < 1.0
-        }) {
-            RGB8 {
-                r: 255,
-                g: 255,
-                b: 255,
-            }
-        } else {
-            RGB8 { r: 0, g: 0, b: 0 }
-        }
     }
 }

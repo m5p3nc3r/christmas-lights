@@ -5,8 +5,8 @@ use rand::{Rng, SeedableRng};
 use crate::{RenderBuffer, RGB8};
 
 
-trait Render<const S: usize, const X: usize, const Y: usize> {
-    fn step(&mut self);
+pub trait Render<const S: usize, const X: usize, const Y: usize> {
+    fn step(&mut self) {}
     // TODO: Use Fixed for t and dt f32's
     fn render(&self, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>);
 }
@@ -29,16 +29,6 @@ impl SparklePoint {
     }
 }
 
-impl Default for SparklePoint {
-    fn default() -> Self {
-        Self {
-            pos: UVec2::default(),
-            color: RGB8::default(),
-            phase: 0,
-        }
-    }
-}
-
 const NUM_SPARKLE_POINTS: usize = 100;
 
 struct Sparkle {
@@ -52,7 +42,7 @@ impl Sparkle {
 
         Self {
             points: core::array::from_fn(|_| SparklePoint::random_pos(&mut rng)),
-            rng: rng,
+            rng,
         }
     }
 }
