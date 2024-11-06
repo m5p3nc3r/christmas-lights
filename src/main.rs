@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use render_engine::{RenderBuffer, ShaderEngine, Shader};
+use render_engine::{RenderBuffer, RenderEngine, Shader};
 
 //
 const NUM_DROP: u32 = 50;
@@ -35,7 +35,7 @@ impl Default for LEDRenderBuffer {
 
 #[derive(Resource, Default)]
 struct LEDRenderEngine {
-    engine: ShaderEngine,
+    engine: RenderEngine,
 }
 
 unsafe impl Send for LEDRenderEngine {}
@@ -99,7 +99,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 }
 
 fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
-    r.engine.set_shader(Shader::Octograms);
+    r.engine.set_shader(Shader::Rainbow);
 }
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {

@@ -3,9 +3,15 @@
 pub use glam::f32::Vec2;
 pub use glam::f32::Vec3;
 pub use glam::u32::UVec2;
-mod octograms;
+use render::RenderType;
+pub use renderbuffer::RenderBuffer;
+use shaders::MainImageFn;
+pub use shaders::Shader;
+use shaders::ShaderInput;
 pub mod shaders;
 mod render;
+mod renderbuffer;
+
 
 // TODO: Replace with crates.io colour library
 #[derive(Clone, Copy, Default)]
@@ -15,116 +21,46 @@ pub struct RGB8 {
     pub b: u8,
 }
 
-pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
-    size: UVec2,
-    buffer: [RGB8; S],
-}
-
-impl<const S: usize, const X:usize, const Y:usize> Default for RenderBuffer<S, X, Y> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-
-impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
-    pub fn new() -> Self {
-        assert!(X * Y == S);
-        Self {
-            size: glam::u32::UVec2::new(X as u32, Y as u32),
-            buffer: [RGB8::default(); S],
-        }
-    }
-
-    pub fn size(&self) -> UVec2 {
-        self.size
-    }
-
-    pub fn buffer(&self) -> &[RGB8] {
-        &self.buffer
-    }
-
-    pub fn buffer_mut(&mut self) -> &mut [RGB8] {
-        &mut self.buffer
-    }
-
-    pub fn clear(&mut self) {
-        for i in 0..self.buffer().len() {
-            self.buffer_mut()[i] = RGB8::default();
-        }
-    }
-
-    pub fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
-        let index = x + y * self.size().x;
-        self.buffer()[index as usize]
-    }
-
-    pub fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
-        let index = x + y * self.size().x;
-        self.buffer_mut()[index as usize] = color;
-    }
-}
-
-
-#[allow(non_snake_case)]
-pub struct ShaderInput {
-    pub iResolution: Vec3,
-    pub iTime: f32,
-    pub iTimeDelta: f32,
-}
-
-type MainImageFn = fn(Vec2, &ShaderInput) -> RGB8;
-
 #[derive(Clone, Copy)]
-pub enum ShaderFunction {
-    MainImage(MainImageFn),
+pub enum RenderFunction{
+    Shader(MainImageFn),
+    Render(RenderType),
     None,
 }
 
 
-pub enum Shader {
-    Rainbow,
-    HypnoticRectangles,
-    Octograms,
-}
-
-impl Shader {
-    fn to_main_image_fn(&self) -> MainImageFn {
-        match self {
-            Shader::Rainbow => shaders::rainbow,
-            Shader::HypnoticRectangles => shaders::hypnotic_rectangles,
-            Shader::Octograms => octograms::octograms,
-        }
-    }
-}
-
-pub struct ShaderEngine {
-    shader: ShaderFunction,
-    transition_to_shader: ShaderFunction,
+pub struct RenderEngine {
+    shader: RenderFunction,
+    transition_to_shader: RenderFunction,
+    // TODO: Use Fixed for transition_duration
     transition_duration: f32,
+
+    shader_engine: shaders::ShaderEngine,
 }
 
-impl Default for ShaderEngine {
+impl Default for RenderEngine {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ShaderEngine {
+impl RenderEngine {
     pub fn new() -> Self {
         Self {
-            shader: ShaderFunction::None,
-            transition_to_shader: ShaderFunction::None,
+            shader: RenderFunction::None,
+            transition_to_shader: RenderFunction::None,
             transition_duration: 0.0,
+
+            shader_engine: shaders::ShaderEngine::new(),
         }
     }
 
     pub fn set_shader(&mut self, shader: Shader) {
-        self.shader = ShaderFunction::MainImage(shader.to_main_image_fn());
+        self.shader = RenderFunction::Shader(shader.to_main_image_fn());
     }
 
     pub fn set_transition_to_shader(&mut self, shader: Shader, duration: f32) {
-        self.transition_to_shader = ShaderFunction::MainImage(shader.to_main_image_fn());
+        self.transition_to_shader = RenderFunction::Shader(shader.to_main_image_fn());
         self.transition_duration = duration;
     }
 
@@ -136,43 +72,45 @@ impl ShaderEngine {
             iTimeDelta: dt,
         };
 
-        //let tmp = RenderBuffer::<S, X, Y>::new();
+        // TODO: Store this in the struct and reuse it
+        let mut back_buffer = RenderBuffer::<S, X, Y>::new();
 
-        if let ShaderFunction::MainImage(shader) = &self.shader {
-            Self::blend(&u, b, shader, 1.0);
-        }
-        if let ShaderFunction::MainImage(shader) = &self.transition_to_shader {
-            Self::blend(&u, b, shader, 1.0 - self.transition_duration);
-
-            // TODO: Calculate duration based on frame rate
-            self.transition_duration -= 0.04;
-            // Replace shader with transition_to_shader if transition_duration is 0
-            if self.transition_duration <= 0.0 {
-                self.shader = self.transition_to_shader;
-                self.transition_to_shader = ShaderFunction::None;
+        match self.shader {
+            RenderFunction::Shader(shader) => {
+                self.shader_engine.render(t, dt, &mut back_buffer, &shader);
             }
+            RenderFunction::Render(_render_type) => {
+                //TODO: Implement me...
+                //render_type.render(t, dt, &mut backBuffer);
+            }
+            RenderFunction::None => {}
         }
+
+        let mut front_buffer = RenderBuffer::<S, X, Y>::new();
+        match self.transition_to_shader {
+            RenderFunction::Shader(shader) => {
+                self.shader_engine.render(t, dt, &mut front_buffer, &shader);
+            }
+            RenderFunction::Render(_render_type) => {
+            }
+        _ => {}
+        }
+
+
+        self.transition_duration = 1.0;
+
+        back_buffer.buffer().iter().zip(front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
+            let new_color = RGB8 {
+                r: (back.r as f32 * self.transition_duration + front.r as f32 * (1.0 - self.transition_duration)) as u8,
+                g: (back.g as f32 * self.transition_duration + front.g as f32 * (1.0 - self.transition_duration)) as u8,
+                b: (back.b as f32 * self.transition_duration + front.b as f32 * (1.0 - self.transition_duration)) as u8,
+            };
+          
+            let x = index % X;
+            let y = index / X;
+            b.set_pixel(x as u32, y as u32, new_color);
+        });
+
     }
 
-    pub fn blend<const S:usize, const X:usize, const Y:usize>(
-        uniforms: &ShaderInput,
-        b: &mut RenderBuffer<S, X, Y>,
-        f: &MainImageFn,
-        part_b: f32,
-    ) {
-        let part_a = 1.0 - part_b;
-
-        for x in 0..b.size().x {
-            for y in 0..b.size().y {
-                let color = f(Vec2::new(x as f32, y as f32), uniforms);
-                let old_color = b.get_pixel(x, y);
-                let new_color = RGB8 {
-                    r: (old_color.r as f32 * part_a + color.r as f32 * part_b) as u8,
-                    g: (old_color.g as f32 * part_a + color.g as f32 * part_b) as u8,
-                    b: (old_color.b as f32 * part_a + color.b as f32 * part_b) as u8,
-                };
-                b.set_pixel(x, y, new_color);
-            }
-        }
-    }
 }
