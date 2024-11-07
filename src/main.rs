@@ -47,8 +47,9 @@ fn main() {
         .add_systems(Startup, (setup, set_default_shader.after(setup)))
         .add_systems(
             FixedUpdate,
-            (keyboard_input, update_offscreen_render, update_pixels),
+            (update_offscreen_render, update_pixels),
         )
+        .add_systems(Update, keyboard_input)
         .run();
 }
 
@@ -86,7 +87,6 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
                         ..default()
                     },
                     sprite: Sprite {
-                        color: Color::RED,
                         ..default()
                     },
                     ..default()
@@ -127,7 +127,7 @@ fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Spri
         let y = pixel.index % LEDS_PER_DROP;
 
         let color = b.buffer.get_pixel(x, y);
-        sprite.color = Color::rgb(
+        sprite.color = Color::srgb(
             color.r as f32 / 255.0,
             color.g as f32 / 255.0,
             color.b as f32 / 255.0,
