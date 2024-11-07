@@ -2,7 +2,8 @@ use glam::UVec2;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
-use crate::{RenderBuffer, RGB8};
+use crate::RenderBuffer;
+use hex_color::HexColor;
 
 #[derive(Clone, Copy)]
 pub enum RenderType {
@@ -44,7 +45,7 @@ pub trait Render<const S: usize, const X: usize, const Y: usize> {
 #[derive(Clone, Copy)]
 struct SparklePoint {
     pos: UVec2,
-    color: RGB8,
+    color: HexColor,
     phase: u8,  // Changed to Fixed??
 }
 
@@ -52,7 +53,7 @@ impl SparklePoint {
     fn random_pos(rng: &mut SmallRng) -> Self {
         Self {
             pos: UVec2::new(rng.gen_range(0..50), rng.gen_range(0..24)),
-            color: RGB8 { r: 255, g: 255, b: 255 },
+            color: HexColor::WHITE,
             phase: rng.gen_range(0..255),
         }
     }

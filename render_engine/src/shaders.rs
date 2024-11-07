@@ -1,7 +1,8 @@
 #![allow(non_snake_case)]
 
-use crate::{RenderBuffer, RGB8};
+use crate::RenderBuffer;
 use crate::{Vec2, Vec3};
+use hex_color::HexColor;
 
 #[allow(non_snake_case)]
 pub struct ShaderInput {
@@ -10,7 +11,7 @@ pub struct ShaderInput {
     pub iTimeDelta: f32,
 }
 
-pub type MainImageFn = fn(Vec2, &ShaderInput) -> RGB8;
+pub type MainImageFn = fn(Vec2, &ShaderInput) -> HexColor;
 
 
 pub struct ShaderEngine {
@@ -56,7 +57,7 @@ impl Shader {
 }
 
 
-pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor {
     let offset = fragCoord.y;
 
     let t = uniforms.iTime + offset / 15.0;
@@ -65,15 +66,15 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     let g = (t * 0.7).sin() * 0.5 + 0.5;
     let b = (t * 1.3).sin() * 0.5 + 0.5;
 
-    RGB8 {
-        r: (r * 255.0) as u8,
-        g: (g * 255.0) as u8,
-        b: (b * 255.0) as u8,
-    }
+    HexColor::rgb(
+        (r * 255.0) as u8,
+        (g * 255.0) as u8,
+        (b * 255.0) as u8,
+    )
 }
 
 // https://www.shadertoy.com/view/lsX3zr
-pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
+pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor {
     // vec2 center = vec2(0.5,0.5);
     const CENTER: Vec2 = Vec2::splat(0.5);
     // float speed = 0.005;
@@ -111,11 +112,11 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> RGB8 {
     let texcol = Vec3::splat(z);
 
     // 	fragColor = vec4(col*texcol,1.0);
-    RGB8 {
-        r: (col.x * texcol.x * 255.0) as u8,
-        g: (col.y * texcol.y * 255.0) as u8,
-        b: (col.z * texcol.z * 255.0) as u8,
-    }
+    HexColor::rgb(
+        (col.x * texcol.x * 255.0) as u8,
+        (col.y * texcol.y * 255.0) as u8,
+        (col.z * texcol.z * 255.0) as u8,
+    )
 }
 
 

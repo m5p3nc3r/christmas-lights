@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 glam = { version = "0.26.0", default-features = false }
 rand = { version = "0.8.4", default-features = false, features = ["small_rng"] }
+hex_color = { version = "3" }
 
 [features]
 default = ["std"]

@@ -3,9 +3,9 @@
 pub use glam::f32::Vec2;
 pub use glam::f32::Vec3;
 pub use glam::u32::UVec2;
+use hex_color::HexColor;
 pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
-use shaders::MainImageFn;
 pub use shaders::Shader;
 pub mod shaders;
 mod render;
@@ -21,20 +21,12 @@ pub enum Renderer {
 
 
 // TODO: Replace with crates.io colour library
-#[derive(Clone, Copy, Default)]
-pub struct RGB8 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-}
-
-#[derive(Clone, Copy)]
-pub enum RenderFunction{
-    Shader(MainImageFn),
-    Render(RenderType),
-    None,
-}
-
+// #[derive(Clone, Copy, Default)]
+// pub struct RGB8 {
+//     pub r: u8,
+//     pub g: u8,
+//     pub b: u8,
+// }
 
 const WIDTH: usize = 50;
 const HEIGHT: usize = 24;
@@ -75,7 +67,6 @@ impl RenderEngine {
 
     pub fn set_renderer(&mut self, renderer: Renderer) {
         self.renderer = renderer;
-//        self.shader = RenderFunction::Shader(shader.to_main_image_fn());
     }
 
     pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: f32) {
@@ -108,15 +99,16 @@ impl RenderEngine {
             Renderer::None => {}
         }
 
-
         self.transition_duration = 1.0;
 
+
+
         self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
-            let new_color = RGB8 {
-                r: (back.r as f32 * self.transition_duration + front.r as f32 * (1.0 - self.transition_duration)) as u8,
-                g: (back.g as f32 * self.transition_duration + front.g as f32 * (1.0 - self.transition_duration)) as u8,
-                b: (back.b as f32 * self.transition_duration + front.b as f32 * (1.0 - self.transition_duration)) as u8,
-            };
+            let new_color = HexColor::rgb(
+                (back.r as f32 * self.transition_duration + front.r as f32 * (1.0 - self.transition_duration)) as u8,
+                (back.g as f32 * self.transition_duration + front.g as f32 * (1.0 - self.transition_duration)) as u8,
+                (back.b as f32 * self.transition_duration + front.b as f32 * (1.0 - self.transition_duration)) as u8,
+            );
           
             let x = index % X;
             let y = index / X;

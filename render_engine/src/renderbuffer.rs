@@ -1,9 +1,9 @@
 use glam::UVec2;
-use crate::RGB8;
+use hex_color::HexColor;
 
 pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
     size: UVec2,
-    buffer: [RGB8; S],
+    buffer: [HexColor; S],
 }
 
 impl<const S: usize, const X:usize, const Y:usize> Default for RenderBuffer<S, X, Y> {
@@ -18,7 +18,7 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         assert!(X * Y == S);
         Self {
             size: glam::u32::UVec2::new(X as u32, Y as u32),
-            buffer: [RGB8::default(); S],
+            buffer: [HexColor::default(); S],
         }
     }
 
@@ -26,26 +26,26 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         self.size
     }
 
-    pub fn buffer(&self) -> &[RGB8] {
+    pub fn buffer(&self) -> &[HexColor] {
         &self.buffer
     }
 
-    pub fn buffer_mut(&mut self) -> &mut [RGB8] {
+    pub fn buffer_mut(&mut self) -> &mut [HexColor] {
         &mut self.buffer
     }
 
     pub fn clear(&mut self) {
         for i in 0..self.buffer().len() {
-            self.buffer_mut()[i] = RGB8::default();
+            self.buffer_mut()[i] = HexColor::default();
         }
     }
 
-    pub fn get_pixel(&self, x: u32, y: u32) -> RGB8 {
+    pub fn get_pixel(&self, x: u32, y: u32) -> HexColor {
         let index = x + y * self.size().x;
         self.buffer()[index as usize]
     }
 
-    pub fn set_pixel(&mut self, x: u32, y: u32, color: RGB8) {
+    pub fn set_pixel(&mut self, x: u32, y: u32, color: HexColor) {
         let index = x + y * self.size().x;
         self.buffer_mut()[index as usize] = color;
     }
