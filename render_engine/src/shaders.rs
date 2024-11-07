@@ -21,7 +21,7 @@ impl ShaderEngine {
         Self {}
     }
 
-    pub fn render<const S:usize, const X: usize, const Y: usize>(&self, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>, shaderFn: &MainImageFn) {
+    pub fn render<const S:usize, const X: usize, const Y: usize>(&self,  shaderFn: &MainImageFn, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
         // Calculate the uniforms
         let uniforms = ShaderInput {
             iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
@@ -38,6 +38,7 @@ impl ShaderEngine {
 }
 
 
+#[derive(Clone, Copy)]
 pub enum Shader {
     Rainbow,
     HypnoticRectangles,

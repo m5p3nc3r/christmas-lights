@@ -52,8 +52,8 @@ impl SparklePoint {
     fn random_pos(rng: &mut SmallRng) -> Self {
         Self {
             pos: UVec2::new(rng.gen_range(0..50), rng.gen_range(0..24)),
-            color: RGB8::default(),
-            phase: 0,
+            color: RGB8 { r: 255, g: 255, b: 255 },
+            phase: rng.gen_range(0..255),
         }
     }
 }
@@ -79,13 +79,22 @@ impl Sparkle {
 impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle {
     fn step(&mut self) {
         for point in self.points.iter_mut() {
-            point.phase = (point.phase + 1) % 255;
+            if point.phase < 255 {
+                point.phase +=1;
+            } else {
+                *point = SparklePoint::random_pos(&mut self.rng);
+                point.phase = 0;
+            }
         }
     }
 
     fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         for point in self.points.iter() {
-            buffer.set_pixel(point.pos.x, point.pos.y, point.color);
+            let mut colour = point.color;
+            colour.r = (colour.r as f32 * (point.phase as f32 / 255.0)) as u8;
+            colour.g = (colour.g as f32 * (point.phase as f32 / 255.0)) as u8;
+            colour.b = (colour.b as f32 * (point.phase as f32 / 255.0)) as u8;
+            buffer.set_pixel(point.pos.x, point.pos.y, colour);
         }
     }
 }

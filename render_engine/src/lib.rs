@@ -3,14 +3,21 @@
 pub use glam::f32::Vec2;
 pub use glam::f32::Vec3;
 pub use glam::u32::UVec2;
-use render::RenderType;
+pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
 use shaders::MainImageFn;
 pub use shaders::Shader;
-use shaders::ShaderInput;
 pub mod shaders;
 mod render;
 mod renderbuffer;
+
+
+#[derive(Clone, Copy)]
+pub enum Renderer {
+    Basic(render::RenderType),
+    Shader(shaders::Shader),
+    None
+}
 
 
 // TODO: Replace with crates.io colour library
@@ -29,13 +36,20 @@ pub enum RenderFunction{
 }
 
 
+const WIDTH: usize = 50;
+const HEIGHT: usize = 24;
+
 pub struct RenderEngine {
-    shader: RenderFunction,
-    transition_to_shader: RenderFunction,
+    renderer: Renderer,
+    transition_to_renderer: Renderer,
     // TODO: Use Fixed for transition_duration
     transition_duration: f32,
 
     shader_engine: shaders::ShaderEngine,
+    // TODO: Place constraints in RenderEngine struct
+    render_engine: render::Renderers<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
+    front_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
+    back_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
 }
 
 impl Default for RenderEngine {
@@ -47,59 +61,57 @@ impl Default for RenderEngine {
 impl RenderEngine {
     pub fn new() -> Self {
         Self {
-            shader: RenderFunction::None,
-            transition_to_shader: RenderFunction::None,
+            renderer: Renderer::None,
+            transition_to_renderer: Renderer::None,
             transition_duration: 0.0,
 
             shader_engine: shaders::ShaderEngine::new(),
+            render_engine: render::Renderers::new(),
+
+            front_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
+            back_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
         }
     }
 
-    pub fn set_shader(&mut self, shader: Shader) {
-        self.shader = RenderFunction::Shader(shader.to_main_image_fn());
+    pub fn set_renderer(&mut self, renderer: Renderer) {
+        self.renderer = renderer;
+//        self.shader = RenderFunction::Shader(shader.to_main_image_fn());
     }
 
-    pub fn set_transition_to_shader(&mut self, shader: Shader, duration: f32) {
-        self.transition_to_shader = RenderFunction::Shader(shader.to_main_image_fn());
+    pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: f32) {
+        self.transition_to_renderer = renderer;
         self.transition_duration = duration;
     }
 
     pub fn render<const S: usize, const X: usize, const Y: usize>(&mut self, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
-        // Calculate the uniforms
-        let u = ShaderInput {
-            iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
-            iTime: t,
-            iTimeDelta: dt,
-        };
-
-        // TODO: Store this in the struct and reuse it
-        let mut back_buffer = RenderBuffer::<S, X, Y>::new();
-
-        match self.shader {
-            RenderFunction::Shader(shader) => {
-                self.shader_engine.render(t, dt, &mut back_buffer, &shader);
+        self.back_buffer.clear();
+        match self.renderer {
+            Renderer::Basic(r) => {
+                self.render_engine.step(r);
+                self.render_engine.render(r, t, dt, &mut self.back_buffer);
             }
-            RenderFunction::Render(_render_type) => {
-                //TODO: Implement me...
-                //render_type.render(t, dt, &mut backBuffer);
+            Renderer::Shader(s) => {
+                self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.back_buffer);
             }
-            RenderFunction::None => {}
+            Renderer::None => {}
         }
 
-        let mut front_buffer = RenderBuffer::<S, X, Y>::new();
-        match self.transition_to_shader {
-            RenderFunction::Shader(shader) => {
-                self.shader_engine.render(t, dt, &mut front_buffer, &shader);
+        self.front_buffer.clear();
+        match self.transition_to_renderer {
+            Renderer::Basic(r) => {
+                self.render_engine.step(r);
+                self.render_engine.render(r, t, dt, &mut self.front_buffer);
             }
-            RenderFunction::Render(_render_type) => {
+            Renderer::Shader(s) => {
+                self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.front_buffer);
             }
-        _ => {}
+            Renderer::None => {}
         }
 
 
         self.transition_duration = 1.0;
 
-        back_buffer.buffer().iter().zip(front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
+        self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
             let new_color = RGB8 {
                 r: (back.r as f32 * self.transition_duration + front.r as f32 * (1.0 - self.transition_duration)) as u8,
                 g: (back.g as f32 * self.transition_duration + front.g as f32 * (1.0 - self.transition_duration)) as u8,
