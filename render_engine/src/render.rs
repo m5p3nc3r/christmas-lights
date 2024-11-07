@@ -1,4 +1,4 @@
-use glam::UVec2;
+use glam::{UVec2, Vec2};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 
@@ -8,27 +8,34 @@ use hex_color::HexColor;
 #[derive(Clone, Copy)]
 pub enum RenderType {
     Sparkle,
+    Snow,
 }
 
 pub struct Renderers<const S: usize, const X: usize, const Y: usize> {
     sparkle: Sparkle,
+    snow: Snow,
 }
 
 impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
     pub fn new() -> Self {
         Self {
             sparkle: Sparkle::new(),
+            snow: Snow::new(),
         }
     }
 
-    pub fn step(&mut self, rederer: RenderType) {
-        match rederer {
+    pub fn step(&mut self, renderer: RenderType) {
+        match renderer {
             RenderType::Sparkle => <Sparkle as Render<S, X, Y>>::step(&mut self.sparkle),
+            RenderType::Snow => <Snow as Render<S, X, Y>>::step(&mut self.snow),
+
         }
     }
     pub fn render(&self, renderer: RenderType, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         match renderer {
             RenderType::Sparkle => self.sparkle.render(t, dt, buffer),
+            RenderType::Snow => self.snow.render(t, dt, buffer),
+
         }
     }
 }
@@ -59,7 +66,7 @@ impl SparklePoint {
     }
 }
 
-const NUM_SPARKLE_POINTS: usize = 100;
+const NUM_SPARKLE_POINTS: usize = 200;
 
 struct Sparkle {
     points: [SparklePoint; NUM_SPARKLE_POINTS],
@@ -91,11 +98,72 @@ impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle 
 
     fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         for point in self.points.iter() {
-            let mut colour = point.color;
-            colour.r = (colour.r as f32 * (point.phase as f32 / 255.0)) as u8;
-            colour.g = (colour.g as f32 * (point.phase as f32 / 255.0)) as u8;
-            colour.b = (colour.b as f32 * (point.phase as f32 / 255.0)) as u8;
+            let colour = point.color.scale(point.phase as f32 / 255.0);
             buffer.set_pixel(point.pos.x, point.pos.y, colour);
         }
     }
+}
+// -----
+
+const NUM_SNOWFLAKES: usize = 100;
+
+struct SnowFlake {
+    pos: Vec2,
+    speed: f32,
+    color: HexColor,
+}
+
+impl SnowFlake {
+    fn new_random(rng: &mut SmallRng) -> Self {
+        Self { 
+            pos:  Vec2::new(
+                rng.gen_range(0.0..50.0), 
+                rng.gen_range(0.0..24.0)
+            ),
+            speed: rng.gen_range(0.1..0.5),
+            color: HexColor::WHITE,
+        }
+    }
+
+    fn new_randon_top(&mut self, rng: &mut SmallRng) {
+        self.pos = Vec2::new(
+            rng.gen_range(0.0..50.0), 
+            0.0
+        );
+    }
+}
+
+struct Snow {
+    snowflakes: [SnowFlake; NUM_SNOWFLAKES],
+    rng: SmallRng,
+}
+
+impl Snow {
+    fn new() -> Self {
+        let mut rng = SmallRng::seed_from_u64(0);
+
+        Self {
+            snowflakes: core::array::from_fn(|_| SnowFlake::new_random(&mut rng)),
+            rng,
+        }
+    }
+}
+
+impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
+    fn step(&mut self) {
+        for snowflake in self.snowflakes.iter_mut() {
+            snowflake.pos.y += snowflake.speed;
+            if snowflake.pos.y > 24.0 {
+                snowflake.new_randon_top(&mut self.rng);
+            }
+        }
+    }
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
+        for snowflake in self.snowflakes.iter() {
+            let x = snowflake.pos.x as u32;
+            let y = snowflake.pos.y as u32;
+            buffer.set_pixel(x, y, snowflake.color);
+        }
+    }
+
 }

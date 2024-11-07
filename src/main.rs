@@ -99,15 +99,17 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 }
 
 fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
-    r.engine.set_renderer(Renderer::Basic(RenderType::Sparkle));
+    r.engine.set_renderer(Renderer::Basic(RenderType::Snow));
 }
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
         r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), 1.0);
     } else if keys.just_pressed(KeyCode::Digit2) {
-        r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), 1.0);
+        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), 1.0);
     } else if keys.just_pressed(KeyCode::Digit3) {
+        r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), 1.0);
+    } else if keys.just_pressed(KeyCode::Digit4) {
         r.engine
             .set_transition_to_renderer(Renderer::Shader(Shader::HypnoticRectangles), 1.0);
     }
