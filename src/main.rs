@@ -8,6 +8,9 @@ const PIXEL_SIZE: Vec2 = Vec2::new(20.0, 20.0);
 const PIXEL_SPACING: f32 = 1.1;
 
 #[derive(Component)]
+struct GameCamera;
+
+#[derive(Component)]
 struct Pixel {
     index: u32,
 }
@@ -50,12 +53,18 @@ fn main() {
             (update_offscreen_render, update_pixels),
         )
         .add_systems(Update, keyboard_input)
+
+        
         .run();
 }
 
 fn setup(mut commands: Commands, windows: Query<&mut Window>) {
+
+    let mut camera = Camera2dBundle::default();
+    camera.projection.scaling_mode = bevy::render::camera::ScalingMode::FixedHorizontal(1280.0);
+
     // Camera
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((camera, GameCamera));
 
     commands.init_resource::<LEDRenderBuffer>();
     commands.init_resource::<LEDRenderEngine>();
