@@ -32,7 +32,7 @@ impl ShaderEngine {
 
         for x in 0..b.size().x {
             for y in 0..b.size().y {
-                b.set_pixel(x, y, shaderFn(Vec2::new(x as f32, y as f32), &uniforms));
+                b.safe_set_pixel(x, y, shaderFn(Vec2::new(x as f32, y as f32), &uniforms));
             }
         }
     }

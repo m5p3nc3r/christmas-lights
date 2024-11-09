@@ -99,14 +99,15 @@ impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle 
     fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         for point in self.points.iter() {
             let colour = point.color.scale(point.phase as f32 / 255.0);
-            buffer.set_pixel(point.pos.x, point.pos.y, colour);
+            buffer.safe_set_pixel(point.pos.x, point.pos.y, colour);
         }
     }
 }
 // -----
 
-const NUM_SNOWFLAKES: usize = 100;
-
+const NUM_SNOWFLAKES: usize = 200;
+const MAX_SNOWFLAKE_SPEED: f32 = 0.5;
+const MIN_SNOWFLAKE_SPEED: f32 = 0.1;
 struct SnowFlake {
     pos: Vec2,
     speed: f32,
@@ -115,13 +116,16 @@ struct SnowFlake {
 
 impl SnowFlake {
     fn new_random(rng: &mut SmallRng) -> Self {
+        let speed = rng.gen_range(MIN_SNOWFLAKE_SPEED..MAX_SNOWFLAKE_SPEED);
+        let color = HexColor::WHITE.scale((speed - MIN_SNOWFLAKE_SPEED) / (MAX_SNOWFLAKE_SPEED - MIN_SNOWFLAKE_SPEED));
+
         Self { 
             pos:  Vec2::new(
                 rng.gen_range(0.0..50.0), 
                 rng.gen_range(0.0..24.0)
             ),
-            speed: rng.gen_range(0.1..0.5),
-            color: HexColor::WHITE,
+            speed,
+            color,
         }
     }
 
@@ -160,9 +164,16 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
     }
     fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
         for snowflake in self.snowflakes.iter() {
+
+            let (y1, y2) = (snowflake.pos.y as u32, (snowflake.pos.y + 1.0) as u32);
             let x = snowflake.pos.x as u32;
-            let y = snowflake.pos.y as u32;
-            buffer.set_pixel(x, y, snowflake.color);
+            let phase = snowflake.pos.y.fract();
+
+
+            buffer.safe_set_max_rgb(x, y1, snowflake.color.scale(1.0 - phase));
+            if phase>0.0 {
+                buffer.safe_set_max_rgb(x, y2, snowflake.color.scale(phase));
+            }
         }
     }
 

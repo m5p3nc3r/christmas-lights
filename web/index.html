@@ -102,9 +102,14 @@
       })();
     </script>
     <script type="module">
+      // Enable paramterisation of the app we are running
       const urlParams = new URLSearchParams(window.location.search);
-      const i = urlParams.get("i");
-      let src = `/out/${i}.js`;
+      const i = urlParams.get("i") || "led_simulator";
+      // The deployment location is slightly different when running on the server
+      let base = document.location.origin.includes("m5p3nc3r.co.uk")
+        ? "/apps/out"
+        : "/out";
+      let src = `${base}/${i}.js`;
 
       import(src).then((module) => {
         module.default();

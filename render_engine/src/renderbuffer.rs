@@ -45,8 +45,23 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         self.buffer()[index as usize]
     }
 
-    pub fn set_pixel(&mut self, x: u32, y: u32, color: HexColor) {
-        let index = x + y * self.size().x;
-        self.buffer_mut()[index as usize] = color;
+    pub fn safe_set_pixel(&mut self, x: u32, y: u32, color: HexColor) {
+        if x < X as u32 && y < Y as u32 {
+            let index = x + y * self.size().x;
+            self.buffer_mut()[index as usize] = color;
+        }
+    }
+
+    pub fn safe_set_max_rgb(&mut self, x: u32, y: u32, color: HexColor) {
+        if x < X as u32 && y < Y as u32 {
+            let current = self.get_pixel(x, y);
+            let new_color = HexColor::rgb (
+                color.r.max(current.r),
+                color.g.max(current.g),
+                color.b.max(current.b),
+            );
+                let index = x + y * self.size().x;
+            self.buffer_mut()[index as usize] = new_color;
+        }
     }
 }

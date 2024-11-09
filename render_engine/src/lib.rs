@@ -108,7 +108,7 @@ impl RenderEngine {
 //            let new_color = back.scale(1.0 - progress) + front.scale(progress);
             let new_color = back.scale(1.0 - progress).checked_add(front.scale(progress)).unwrap_or(HexColor::WHITE);
 
-            b.set_pixel((index % X) as u32, (index / X) as u32, new_color);
+            b.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
         });
 
     }
