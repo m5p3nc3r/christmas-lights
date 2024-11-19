@@ -1,16 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use glam::f32::Vec2;
-pub use glam::f32::Vec3;
 pub use glam::u32::UVec2;
-use hex_color::HexColor;
 pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
 pub use shaders::Shader;
 pub mod shaders;
 mod render;
 mod renderbuffer;
+mod transition;
+mod fixedcolor;
 
+use fixed;
+use transition::Transition;
+
+pub type Fixed = fixed::FixedI32<fixed::types::extra::U24>;
 
 #[derive(Clone, Copy)]
 pub enum Renderer {
@@ -24,7 +27,7 @@ const HEIGHT: usize = 24;
 
 pub struct RenderEngine {
     renderer: Renderer,
-    transition: Option<Transition>,
+    transition: Option<Transition<Fixed>>,
     // TODO: Use Fixed for transition_duration
 
     shader_engine: shaders::ShaderEngine,
@@ -58,16 +61,15 @@ impl RenderEngine {
         self.renderer = renderer;
     }
 
-    pub fn tx_progress(&self) -> f32 {
-        self.transition.as_ref().map(|t| t.progress()).unwrap_or(0.0)
+    pub fn tx_progress(&self) -> Fixed {
+        self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO)
     }
 
-    pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: f32) {
+    pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: Fixed) {
         self.transition = Some(Transition::new(renderer, duration));
     }
 
-    pub fn render<const S: usize, const X: usize, const Y: usize>(&mut self, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
-
+    pub fn render<const S: usize, const X: usize, const Y: usize>(&mut self, t: Fixed, dt: Fixed, b: &mut RenderBuffer<S, X, Y>) {
         if let Some(transition) = &mut self.transition {
             transition.step(dt);
             if transition.is_done() {
@@ -102,48 +104,17 @@ impl RenderEngine {
             }
         }
 
-        let progress = self.transition.as_ref().map(|t| t.progress()).unwrap_or(0.0);
+        let progress = self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO);
 
         self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
 //            let new_color = back.scale(1.0 - progress) + front.scale(progress);
-            let new_color = back.scale(1.0 - progress).checked_add(front.scale(progress)).unwrap_or(HexColor::WHITE);
+            let x = Fixed::ONE - progress;
+            let y = progress;
+            let new_color = back.scale(x).saturating_add(front.scale(y));
 
             b.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
         });
 
     }
 
-}
-
-
-struct Transition {
-    pub renderer: Renderer,
-    duration: f32,
-    current: f32,
-}
-
-impl Transition {
-    fn new(renderer: Renderer, duration: f32) -> Self {
-        Self {
-            renderer,
-            duration,
-            current: 0.0,
-        }
-    }
-
-    fn step(&mut self, dt: f32) {
-        self.current += dt;
-    }
-
-    fn is_done(&self) -> bool {
-        self.current >= self.duration
-    }
-
-    fn progress(&self) -> f32 {
-        if self.current >= self.duration || self.duration == 0.0 {
-            return 0.0;
-        } else {
-            self.current / self.duration
-        }
-    }
 }

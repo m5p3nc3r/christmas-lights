@@ -1,9 +1,9 @@
 use glam::UVec2;
-use hex_color::HexColor;
 
+use crate::fixedcolor::FixedColor;
 pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
     size: UVec2,
-    buffer: [HexColor; S],
+    buffer: [FixedColor; S],
 }
 
 impl<const S: usize, const X:usize, const Y:usize> Default for RenderBuffer<S, X, Y> {
@@ -18,7 +18,7 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         assert!(X * Y == S);
         Self {
             size: glam::u32::UVec2::new(X as u32, Y as u32),
-            buffer: [HexColor::default(); S],
+            buffer: [FixedColor::default(); S],
         }
     }
 
@@ -26,36 +26,36 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         self.size
     }
 
-    pub fn buffer(&self) -> &[HexColor] {
+    pub fn buffer(&self) -> &[FixedColor] {
         &self.buffer
     }
 
-    pub fn buffer_mut(&mut self) -> &mut [HexColor] {
+    pub fn buffer_mut(&mut self) -> &mut [FixedColor] {
         &mut self.buffer
     }
 
     pub fn clear(&mut self) {
         for i in 0..self.buffer().len() {
-            self.buffer_mut()[i] = HexColor::default();
+            self.buffer_mut()[i] = FixedColor::default();
         }
     }
 
-    pub fn get_pixel(&self, x: u32, y: u32) -> HexColor {
+    pub fn get_pixel(&self, x: u32, y: u32) -> FixedColor {
         let index = x + y * self.size().x;
         self.buffer()[index as usize]
     }
 
-    pub fn safe_set_pixel(&mut self, x: u32, y: u32, color: HexColor) {
+    pub fn safe_set_pixel(&mut self, x: u32, y: u32, color: FixedColor) {
         if x < X as u32 && y < Y as u32 {
             let index = x + y * self.size().x;
             self.buffer_mut()[index as usize] = color;
         }
     }
 
-    pub fn safe_set_max_rgb(&mut self, x: u32, y: u32, color: HexColor) {
+    pub fn safe_set_max_rgb(&mut self, x: u32, y: u32, color: FixedColor) {
         if x < X as u32 && y < Y as u32 {
             let current = self.get_pixel(x, y);
-            let new_color = HexColor::rgb (
+            let new_color = FixedColor::rgb (
                 color.r.max(current.r),
                 color.g.max(current.g),
                 color.b.max(current.b),

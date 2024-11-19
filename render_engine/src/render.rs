@@ -1,9 +1,48 @@
-use glam::{UVec2, Vec2};
+use glam::UVec2;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
+use az::Cast;
+use bytemuck::Contiguous;
 
-use crate::RenderBuffer;
-use hex_color::HexColor;
+struct FixedVec2 {
+    x: Fixed,
+    y: Fixed,
+}
+
+impl FixedVec2 {
+    fn new(x: Fixed, y: Fixed) -> Self {
+        Self {
+            x,
+            y,
+        }
+    }
+}
+
+
+// A macro that generates a generic typed fixed-point number from a smallrng
+macro_rules! fixed_rng_gen {
+    ($rng:expr, $type:ty) => {
+        {
+            <$type>::from_bits($rng.gen())
+        }
+    };
+}
+
+macro_rules! fixed_rng_gen_range {
+    ($rng:expr, $type:ty, $min:expr, $max:expr) => {
+        {
+            let min = <$type>::from_num($min).to_bits();
+            let max = <$type>::from_num($max).to_bits();
+            let val = $rng.gen_range(min..max);
+            <$type>::from_bits(val)
+        }
+    };
+}
+
+
+
+use crate::fixedcolor::FixedColor;
+use crate::{Fixed, RenderBuffer};
 
 #[derive(Clone, Copy)]
 pub enum RenderType {
@@ -28,14 +67,13 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         match renderer {
             RenderType::Sparkle => <Sparkle as Render<S, X, Y>>::step(&mut self.sparkle),
             RenderType::Snow => <Snow as Render<S, X, Y>>::step(&mut self.snow),
-
         }
     }
-    pub fn render(&self, renderer: RenderType, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
+
+    pub fn render(&self, renderer: RenderType, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
         match renderer {
             RenderType::Sparkle => self.sparkle.render(t, dt, buffer),
             RenderType::Snow => self.snow.render(t, dt, buffer),
-
         }
     }
 }
@@ -44,24 +82,28 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
 
 pub trait Render<const S: usize, const X: usize, const Y: usize> {
     fn step(&mut self);
-    // TODO: Use Fixed for t and dt f32's
-    fn render(&self, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>);
+    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>);
 }
 
+
+type SparklePhase = fixed::FixedU8<fixed::types::extra::U8>;
 
 #[derive(Clone, Copy)]
 struct SparklePoint {
     pos: UVec2,
-    color: HexColor,
-    phase: u8,  // Changed to Fixed??
+    color: FixedColor,
+    phase: SparklePhase,
 }
 
 impl SparklePoint {
     fn random_pos(rng: &mut SmallRng) -> Self {
+
+        let phase = fixed_rng_gen!(rng, SparklePhase);
+
         Self {
             pos: UVec2::new(rng.gen_range(0..50), rng.gen_range(0..24)),
-            color: HexColor::WHITE,
-            phase: rng.gen_range(0..255),
+            color: FixedColor::WHITE,
+            phase,
         }
     }
 }
@@ -86,19 +128,20 @@ impl Sparkle {
 
 impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle {
     fn step(&mut self) {
+        let phase_inc = SparklePhase::from_num(0.005);
         for point in self.points.iter_mut() {
-            if point.phase < 255 {
-                point.phase +=1;
+            if let Some(phase) = point.phase.checked_add(phase_inc) {
+                point.phase = phase;
             } else {
                 *point = SparklePoint::random_pos(&mut self.rng);
-                point.phase = 0;
+                point.phase = SparklePhase::default();
             }
         }
     }
 
-    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
+    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
         for point in self.points.iter() {
-            let colour = point.color.scale(point.phase as f32 / 255.0);
+            let colour = point.color.scale(point.phase.cast());
             buffer.safe_set_pixel(point.pos.x, point.pos.y, colour);
         }
     }
@@ -109,31 +152,36 @@ const NUM_SNOWFLAKES: usize = 200;
 const MAX_SNOWFLAKE_SPEED: f32 = 0.5;
 const MIN_SNOWFLAKE_SPEED: f32 = 0.1;
 struct SnowFlake {
-    pos: Vec2,
-    speed: f32,
-    color: HexColor,
+    pos: FixedVec2,
+    speed: Fixed,
+    color: FixedColor,
 }
 
 impl SnowFlake {
     fn new_random(rng: &mut SmallRng) -> Self {
-        let speed = rng.gen_range(MIN_SNOWFLAKE_SPEED..MAX_SNOWFLAKE_SPEED);
-        let color = HexColor::WHITE.scale((speed - MIN_SNOWFLAKE_SPEED) / (MAX_SNOWFLAKE_SPEED - MIN_SNOWFLAKE_SPEED));
+        let min = Fixed::from_num(MIN_SNOWFLAKE_SPEED);
+        let max = Fixed::from_num(MAX_SNOWFLAKE_SPEED);
+
+        let speed = fixed_rng_gen_range!(rng, Fixed, MIN_SNOWFLAKE_SPEED, MAX_SNOWFLAKE_SPEED);
+        let scale = (speed - min) / (max - min);
+        let color = FixedColor::WHITE.scale(scale);
+
 
         Self { 
-            pos:  Vec2::new(
-                rng.gen_range(0.0..50.0), 
-                rng.gen_range(0.0..24.0)
-            ),
+            pos:  FixedVec2 {
+                x: fixed_rng_gen_range!(rng, Fixed, 0.0, 50.0),
+                y: fixed_rng_gen_range!(rng, Fixed, 0.0, 24.0),
+            },
             speed,
             color,
         }
     }
 
     fn new_randon_top(&mut self, rng: &mut SmallRng) {
-        self.pos = Vec2::new(
-            rng.gen_range(0.0..50.0), 
-            0.0
-        );
+        self.pos = FixedVec2 {
+            x: fixed_rng_gen_range!(rng, Fixed, 0.0, 50.0),
+            y: Fixed::ZERO,
+        };
     }
 }
 
@@ -162,17 +210,22 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
             }
         }
     }
-    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>) {
+    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
         for snowflake in self.snowflakes.iter() {
 
-            let (y1, y2) = (snowflake.pos.y as u32, (snowflake.pos.y + 1.0) as u32);
-            let x = snowflake.pos.x as u32;
-            let phase = snowflake.pos.y.fract();
+            let one = Fixed::ONE;
 
+            let (y1, y2) = (snowflake.pos.y.into_integer() as u32, (snowflake.pos.y + one).into_integer() as u32);
+            let x = snowflake.pos.x.into_integer() as u32;
+            let phase = snowflake.pos.y.frac();
 
-            buffer.safe_set_max_rgb(x, y1, snowflake.color.scale(1.0 - phase));
-            if phase>0.0 {
-                buffer.safe_set_max_rgb(x, y2, snowflake.color.scale(phase));
+            //let phase = Fixed::ZERO;
+            let xx: u32 = snowflake.pos.x.cast();
+            let yy: u32 = snowflake.pos.y.cast();
+
+            buffer.safe_set_max_rgb(xx, yy, snowflake.color.scale(one - phase));
+            if phase >0.0 {
+                buffer.safe_set_max_rgb(xx, yy+1, snowflake.color.scale(phase));
             }
         }
     }

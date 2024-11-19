@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Shader};
+use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Shader, Fixed};
+use az::Cast;
 
 //
 const NUM_DROP: u32 = 50;
@@ -108,19 +109,19 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 }
 
 fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
-    r.engine.set_renderer(Renderer::Basic(RenderType::Snow));
+    r.engine.set_renderer(Renderer::Basic(RenderType::Sparkle));
 }
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
-        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), 1.0);
+        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), Fixed::from_num(1.0));
     } else if keys.just_pressed(KeyCode::Digit2) {
-        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), 1.0);
+        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), Fixed::from_num(1.0));
     } else if keys.just_pressed(KeyCode::Digit3) {
-        r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), 1.0);
+        r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), Fixed::from_num(1.0));
     } else if keys.just_pressed(KeyCode::Digit4) {
         r.engine
-            .set_transition_to_renderer(Renderer::Shader(Shader::HypnoticRectangles), 1.0);
+            .set_transition_to_renderer(Renderer::Shader(Shader::HypnoticRectangles), Fixed::from_num(1.0));
     }
 }
 
@@ -129,7 +130,8 @@ fn update_offscreen_render(
     mut r: ResMut<LEDRenderEngine>,
     mut b: ResMut<LEDRenderBuffer>,
 ) {
-    r.engine.render(time.elapsed_seconds(), time.delta_seconds(), &mut b.buffer);
+    // TODO: Fix elapsed_seconds so that it wraps 
+    r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_seconds()), &mut b.buffer);
 }
 
 fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
@@ -139,9 +141,9 @@ fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Spri
 
         let color = b.buffer.get_pixel(x, y);
         sprite.color = Color::srgb(
-            color.r as f32 / 255.0,
-            color.g as f32 / 255.0,
-            color.b as f32 / 255.0,
+            color.r.cast(),
+            color.g.cast(),
+            color.b.cast(),
         );
     }
 }

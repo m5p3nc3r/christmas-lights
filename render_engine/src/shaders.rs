@@ -1,8 +1,10 @@
 #![allow(non_snake_case)]
 
-use crate::RenderBuffer;
-use crate::{Vec2, Vec3};
-use hex_color::HexColor;
+use crate::fixedcolor::FixedColor;
+use crate::{Fixed, RenderBuffer};
+
+use glam::f32::Vec2;
+use glam::f32::Vec3;
 
 #[allow(non_snake_case)]
 pub struct ShaderInput {
@@ -11,7 +13,7 @@ pub struct ShaderInput {
     pub iTimeDelta: f32,
 }
 
-pub type MainImageFn = fn(Vec2, &ShaderInput) -> HexColor;
+pub type MainImageFn = fn(Vec2, &ShaderInput) -> FixedColor;
 
 
 pub struct ShaderEngine {
@@ -22,19 +24,19 @@ impl ShaderEngine {
         Self {}
     }
 
-    pub fn render<const S:usize, const X: usize, const Y: usize>(&self,  shaderFn: &MainImageFn, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
-        // Calculate the uniforms
-        let uniforms = ShaderInput {
-            iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
-            iTime: t,
-            iTimeDelta: dt,
-        };
+    pub fn render<const S:usize, const X: usize, const Y: usize>(&self,  shaderFn: &MainImageFn, t: Fixed, dt: Fixed, b: &mut RenderBuffer<S, X, Y>) {
+        // // Calculate the uniforms
+        // let uniforms = ShaderInput {
+        //     iResolution: Vec3::new(b.size().x as f32, b.size().y as f32, 0.0),
+        //     iTime: t,
+        //     iTimeDelta: dt,
+        // };
 
-        for x in 0..b.size().x {
-            for y in 0..b.size().y {
-                b.safe_set_pixel(x, y, shaderFn(Vec2::new(x as f32, y as f32), &uniforms));
-            }
-        }
+        // for x in 0..b.size().x {
+        //     for y in 0..b.size().y {
+        //         b.safe_set_pixel(x, y, shaderFn(Vec2::new(x as f32, y as f32), &uniforms));
+        //     }
+        // }
     }
 }
 
@@ -57,7 +59,7 @@ impl Shader {
 }
 
 
-pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor {
+pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> FixedColor {
     let offset = fragCoord.y;
 
     let t = uniforms.iTime + offset / 15.0;
@@ -66,15 +68,17 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor {
     let g = (t * 0.7).sin() * 0.5 + 0.5;
     let b = (t * 1.3).sin() * 0.5 + 0.5;
 
-    HexColor::rgb(
-        (r * 255.0) as u8,
-        (g * 255.0) as u8,
-        (b * 255.0) as u8,
-    )
+    // TODO: Fix me
+    // FixedColor::rgb(
+    //     (r * 255.0),
+    //     (g * 255.0),
+    //     (b * 255.0),
+    // )
+    FixedColor::WHITE
 }
 
 // https://www.shadertoy.com/view/lsX3zr
-pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor {
+pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> FixedColor {
     // vec2 center = vec2(0.5,0.5);
     const CENTER: Vec2 = Vec2::splat(0.5);
     // float speed = 0.005;
@@ -112,11 +116,13 @@ pub fn hypnotic_rectangles(fragCoord: Vec2, uniforms: &ShaderInput) -> HexColor 
     let texcol = Vec3::splat(z);
 
     // 	fragColor = vec4(col*texcol,1.0);
-    HexColor::rgb(
-        (col.x * texcol.x * 255.0) as u8,
-        (col.y * texcol.y * 255.0) as u8,
-        (col.z * texcol.z * 255.0) as u8,
-    )
+    // TODO: Fix me
+    // FixedColor::rgb(
+    //     (col.x * texcol.x * 255.0) as u8,
+    //     (col.y * texcol.y * 255.0) as u8,
+    //     (col.z * texcol.z * 255.0) as u8,
+    // )
+    FixedColor::WHITE
 }
 
 
