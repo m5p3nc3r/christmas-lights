@@ -1,8 +1,34 @@
 use glam::UVec2;
+use rand::distributions::uniform::UniformSampler;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use az::Cast;
 use bytemuck::Contiguous;
+
+
+struct MyFixed(fixed::FixedI32<fixed::types::extra::U24>);
+impl UniformSampler for MyFixed {
+    type X = MyFixed;
+
+    fn new<B1, B2>(low: B1, high: B2) -> Self
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized {
+        todo!()
+    }
+
+    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+    where
+        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
+        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized {
+        todo!()
+    }
+
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+        todo!()
+    }
+}
+
 
 struct FixedVec2 {
     x: Fixed,

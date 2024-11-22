@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use crate::fixedcolor::FixedColor;
+use crate::fixedcolor::{FixedColor, T as ColorType};
 use crate::{Fixed, RenderBuffer};
 
 use glam::f32::Vec2;
@@ -68,13 +68,13 @@ pub fn rainbow(fragCoord: Vec2, uniforms: &ShaderInput) -> FixedColor {
     let g = (t * 0.7).sin() * 0.5 + 0.5;
     let b = (t * 1.3).sin() * 0.5 + 0.5;
 
-    // TODO: Fix me
-    // FixedColor::rgb(
-    //     (r * 255.0),
-    //     (g * 255.0),
-    //     (b * 255.0),
-    // )
-    FixedColor::WHITE
+    FixedColor{
+        r: ColorType::from_num(r),
+        g: ColorType::from_num(g),
+        b: ColorType::from_num(b),
+        a: ColorType::ONE,
+        
+    }
 }
 
 // https://www.shadertoy.com/view/lsX3zr
