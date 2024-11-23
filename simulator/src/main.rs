@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Shader, Fixed};
+use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Fixed};
 use az::Cast;
 
 //
@@ -117,11 +117,11 @@ fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine
         r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), Fixed::from_num(1.0));
     } else if keys.just_pressed(KeyCode::Digit2) {
         r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), Fixed::from_num(1.0));
-    } else if keys.just_pressed(KeyCode::Digit3) {
-        r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), Fixed::from_num(1.0));
-    } else if keys.just_pressed(KeyCode::Digit4) {
-        r.engine
-            .set_transition_to_renderer(Renderer::Shader(Shader::HypnoticRectangles), Fixed::from_num(1.0));
+    // } else if keys.just_pressed(KeyCode::Digit3) {
+    //     r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), Fixed::from_num(1.0));
+    // } else if keys.just_pressed(KeyCode::Digit4) {
+    //     r.engine
+    //         .set_transition_to_renderer(Renderer::Shader(Shader::HypnoticRectangles), Fixed::from_num(1.0));
     }
 }
 

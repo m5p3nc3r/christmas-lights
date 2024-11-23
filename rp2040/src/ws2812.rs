@@ -1,4 +1,3 @@
-use embassy_futures::block_on;
 use embassy_rp::dma::{AnyChannel, Channel};
 use embassy_rp::pio::{
     Common, Config, FifoJoin, Instance, PioPin, ShiftConfig, ShiftDirection, StateMachine,
@@ -6,7 +5,8 @@ use embassy_rp::pio::{
 use embassy_rp::{clocks, into_ref, Peripheral, PeripheralRef};
 use fixed::types::U24F8;
 use fixed_macro::fixed;
-use smart_leds_trait::{SmartLedsWrite, RGB8};
+use smart_leds_trait::RGB8;
+
 
 pub struct Ws2812<'d, P: Instance, const S: usize, const N: usize> {
     dma: PeripheralRef<'d, AnyChannel>,
@@ -83,43 +83,18 @@ impl<'d, P: Instance, const S: usize, const N: usize> Ws2812<'d, P, S, N> {
         }
     }
 
-    // pub async fn write(&mut self, colors: &[RGB8; N], swizzle: fn(usize) -> usize) {
-    //     // Precompute the word bytes from the colors
-    //     let mut words = [0u32; N];
-    //     for i in 0..N {
-    //         let p = swizzle(i);
+    pub async fn write(&mut self, mut iter: impl Iterator<Item = RGB8>) {
+        let mut words = [0u32; S];
 
-    //         let word = (u32::from(colors[p].g) << 24)
-    //             | (u32::from(colors[p].r) << 16)
-    //             | (u32::from(colors[p].b) << 8);
-    //         words[i] = word;
-    //     }
-
-    //     // DMA transfer
-    //     self.sm.tx().dma_push(self.dma.reborrow(), &words).await;
-    // }
-}
-
-impl<'d, P: Instance, const S: usize, const N: usize> SmartLedsWrite for Ws2812<'d, P, S, N> {
-    type Error = ();
-    type Color = RGB8;
-
-    fn write<T, I>(&mut self, iterator: T) -> Result<(), Self::Error>
-    where
-        T: IntoIterator<Item = I>,
-        I: Into<Self::Color>,
-    {
-        // Convert the colors to words
-        let mut words = [0u32; N];
-        for (word, color) in words.iter_mut().zip(iterator) {
-            let color: Self::Color = color.into();
-            *word =
-                (u32::from(color.g) << 24) | (u32::from(color.r) << 16) | (u32::from(color.b) << 8);
+        for color in iter.by_ref().take(S) {
+            let word: u32 = ((color.g as u32) << 24)
+                | ((color.r as u32) << 16)
+                | ((color.b as u32) << 8);
+            words[S] = word;
         }
 
-        // Start the DMA transfer
-        // Note: This is a placeholder. You need to replace it with the actual DMA transfer code.
-        block_on(self.sm.tx().dma_push(self.dma.reborrow(), &words));
-        Ok(())
+       
+        // DMA transfer
+        self.sm.tx().dma_push(self.dma.reborrow(), &words).await;   
     }
 }

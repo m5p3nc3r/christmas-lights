@@ -6,12 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glam = { version = "0.26.0", default-features = false }
 rand = { version = "0.8.4", default-features = false, features = ["small_rng"] }
 fixed = "1.28.0"
 az = "1.2.1"
 bytemuck = "1.19.0"
-
-[features]
-default = ["std"]
-std = ["glam/std"]

@@ -1,4 +1,4 @@
-use glam::UVec2;
+use crate::UVec2;
 
 use crate::fixedcolor::FixedColor;
 pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
@@ -17,7 +17,7 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
     pub fn new() -> Self {
         assert!(X * Y == S);
         Self {
-            size: glam::u32::UVec2::new(X as u32, Y as u32),
+            size: UVec2::new(X as u32, Y as u32),
             buffer: [FixedColor::default(); S],
         }
     }

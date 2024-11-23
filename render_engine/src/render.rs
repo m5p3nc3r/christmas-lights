@@ -1,49 +1,12 @@
-use glam::UVec2;
-use rand::distributions::uniform::UniformSampler;
+use crate::UVec2;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use az::Cast;
-use bytemuck::Contiguous;
-
-
-struct MyFixed(fixed::FixedI32<fixed::types::extra::U24>);
-impl UniformSampler for MyFixed {
-    type X = MyFixed;
-
-    fn new<B1, B2>(low: B1, high: B2) -> Self
-    where
-        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
-        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized {
-        todo!()
-    }
-
-    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
-    where
-        B1: rand::distributions::uniform::SampleBorrow<Self::X> + Sized,
-        B2: rand::distributions::uniform::SampleBorrow<Self::X> + Sized {
-        todo!()
-    }
-
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
-        todo!()
-    }
-}
-
 
 struct FixedVec2 {
     x: Fixed,
     y: Fixed,
 }
-
-impl FixedVec2 {
-    fn new(x: Fixed, y: Fixed) -> Self {
-        Self {
-            x,
-            y,
-        }
-    }
-}
-
 
 // A macro that generates a generic typed fixed-point number from a smallrng
 macro_rules! fixed_rng_gen {
@@ -240,18 +203,14 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
         for snowflake in self.snowflakes.iter() {
 
             let one = Fixed::ONE;
-
-            let (y1, y2) = (snowflake.pos.y.into_integer() as u32, (snowflake.pos.y + one).into_integer() as u32);
-            let x = snowflake.pos.x.into_integer() as u32;
             let phase = snowflake.pos.y.frac();
 
-            //let phase = Fixed::ZERO;
-            let xx: u32 = snowflake.pos.x.cast();
-            let yy: u32 = snowflake.pos.y.cast();
+            let x: u32 = snowflake.pos.x.cast();
+            let y: u32 = snowflake.pos.y.cast();
 
-            buffer.safe_set_max_rgb(xx, yy, snowflake.color.scale(one - phase));
+            buffer.safe_set_max_rgb(x, y, snowflake.color.scale(one - phase));
             if phase >0.0 {
-                buffer.safe_set_max_rgb(xx, yy+1, snowflake.color.scale(phase));
+                buffer.safe_set_max_rgb(x, y+1, snowflake.color.scale(phase));
             }
         }
     }

@@ -1,14 +1,15 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-pub use glam::u32::UVec2;
+pub use vec::UVec2;
 pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
-pub use shaders::Shader;
-pub mod shaders;
+//pub use shaders::Shader;
+//pub mod shaders;
 mod render;
 mod renderbuffer;
 mod transition;
 mod fixedcolor;
+mod vec;
 
 use fixed;
 use transition::Transition;
@@ -18,7 +19,7 @@ pub type Fixed = fixed::FixedI32<fixed::types::extra::U24>;
 #[derive(Clone, Copy)]
 pub enum Renderer {
     Basic(render::RenderType),
-    Shader(shaders::Shader),
+//    Shader(shaders::Shader),
     None
 }
 
@@ -30,7 +31,7 @@ pub struct RenderEngine {
     transition: Option<Transition<Fixed>>,
     // TODO: Use Fixed for transition_duration
 
-    shader_engine: shaders::ShaderEngine,
+//    shader_engine: shaders::ShaderEngine,
     // TODO: Place constraints in RenderEngine struct
     render_engine: render::Renderers<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
     front_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
@@ -49,7 +50,7 @@ impl RenderEngine {
             renderer: Renderer::None,
             transition: None,
 
-            shader_engine: shaders::ShaderEngine::new(),
+//            shader_engine: shaders::ShaderEngine::new(),
             render_engine: render::Renderers::new(),
 
             front_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
@@ -84,9 +85,9 @@ impl RenderEngine {
                 self.render_engine.step(r);
                 self.render_engine.render(r, t, dt, &mut self.back_buffer);
             }
-            Renderer::Shader(s) => {
-                self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.back_buffer);
-            }
+            // Renderer::Shader(s) => {
+            //     self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.back_buffer);
+            // }
             Renderer::None => {}
         }
 
@@ -97,9 +98,9 @@ impl RenderEngine {
                     self.render_engine.step(r);
                     self.render_engine.render(r, t, dt, &mut self.front_buffer);
                 }
-                Renderer::Shader(s) => {
-                    self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.front_buffer);
-                }
+                // Renderer::Shader(s) => {
+                //     self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.front_buffer);
+                // }
                 Renderer::None => {}
             }
         }

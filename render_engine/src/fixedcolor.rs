@@ -21,6 +21,14 @@ impl FixedColor {
         Self { r, g, b, a: T::ONE }
     }
 
+    pub fn to_rgb8(&self) -> (u8, u8, u8) {
+        (
+            self.r.to_num::<u8>(),
+            self.g.to_num::<u8>(),
+            self.b.to_num::<u8>(),
+        )
+    }
+
     pub fn scale(&self, scale: T) -> Self {
         Self {
             r: self.r.saturating_mul(scale),

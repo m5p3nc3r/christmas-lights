@@ -43,6 +43,7 @@ embedded-graphics-framebuf = "0.5.0"
 smart-leds-matrix = "0.2.0"
 embedded-graphics-core = "0.4.0"
 smart-leds-trait = "0.3.0"
+render_engine = { path = "../render_engine" }
 
 [features]
 critical-section-impl = ["critical-section/restore-state-u8"]
