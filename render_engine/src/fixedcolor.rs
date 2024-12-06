@@ -1,3 +1,5 @@
+use core::array::IntoIter;
+
 
 pub type T = fixed::FixedI32<fixed::types::extra::U24>;
 
@@ -21,7 +23,7 @@ impl FixedColor {
         Self { r, g, b, a: T::ONE }
     }
 
-    pub fn to_rgb8(&self) -> (u8, u8, u8) {
+    pub fn as_rgb8(&self) -> (u8, u8, u8) {
         (
             self.r.to_num::<u8>(),
             self.g.to_num::<u8>(),

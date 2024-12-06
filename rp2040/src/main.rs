@@ -2,18 +2,20 @@
 #![no_main]
 
 mod ws2812;
+mod statusled;
 
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
-use embassy_rp::peripherals::PIO0;
+use embassy_rp::peripherals::{DMA_CH0, PIN_16, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer};
 
-use render_engine::{RenderBuffer, RenderEngine, Fixed};
+use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
 use smart_leds::RGB;
 
 use crate::ws2812::Ws2812;
+use crate::statusled::status_led;
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
@@ -22,7 +24,7 @@ bind_interrupts!(struct Irqs {
 
 
 const LEDS_PER_DROP: usize = 24;
-const NUM_DROPS: usize = 50;
+const NUM_DROPS: usize = 20;
 
 struct Buffer50x24(RenderBuffer<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>);
 
@@ -53,7 +55,6 @@ impl<'a> IntoIterator for &'a Buffer50x24 {
     }
 }
   
-
 impl Iterator for BufferIterator<'_> {
     type Item = RGB<u8>;
 
@@ -64,45 +65,68 @@ impl Iterator for BufferIterator<'_> {
             let x = self.index % size.x;
             let y = self.index / size.x;
 
-            let (r, g, b) = self.buffer.get_pixel(x, y).to_rgb8();
+            let (r, g, b) = self.buffer.get_pixel(x, y).as_rgb8();
 
             self.index += 1;
-            return Some(RGB::new(r, g, b));
+            Some(RGB::new(r, g, b))
     
         } else {
-            return None;
+            None
         }
     }
 }
 
-
-#[embassy_executor::main]
-async fn main(_spawner: Spawner) {
-    info!("Start");
-    let p = embassy_rp::init(Default::default());
-
+#[embassy_executor::task]
+pub async fn display_engine(pio: PIO0, dma: DMA_CH0, pin: PIN_16) {
     let Pio {
         mut common, sm0, ..
-    } = Pio::new(p.PIO0, Irqs);
+    } = Pio::new(pio, Irqs);
 
-    // This is the number of leds in the string. Helpfully, the sparkfun thing plus and adafruit
-    // feather boards for the 2040 both have one built in.
-    //    let mut data = [RGB8::default(); NUM_LEDS];
+     let mut ws2812: Ws2812<'_, _, 0, {NUM_DROPS * LEDS_PER_DROP}> = Ws2812::new(&mut common, sm0, dma, pin);
+     let mut buffer= Buffer50x24::new();
+     let mut engine = RenderEngine::new();
 
-    // Common neopixel pins:
-    // Thing plus: 8
-    // Adafruit Feather: 16;  Adafruit Feather+RFM95: 4
-    let mut ws2812: Ws2812<'_, PIO0, 0, {NUM_DROPS * LEDS_PER_DROP}> = Ws2812::new(&mut common, sm0, p.DMA_CH0, p.PIN_16);
-    let mut buffer= Buffer50x24::new();
-    let mut engine = RenderEngine::new();
-
+//     engine.set_renderer(Renderer::Basic(RenderType::Snow));
 
     loop {
-        engine.render(Fixed::ZERO, Fixed::from_num(0.04), buffer.get_mut_buffer());
+//        engine.render(Fixed::ZERO, Fixed::ZERO, buffer.get_mut_buffer());
         ws2812.write(buffer.into_iter()).await;
         
-        Timer::after_millis(40).await;
+        info!("Still alive");
+        //Timer::after(Duration::from_millis(40)).await;
     }
+}
+
+
+
+#[embassy_executor::main]
+async fn main(spawner: Spawner) {
+    info!("Start");
+    let p: embassy_rp::Peripherals = embassy_rp::init(Default::default());
+
+
+
+    spawner.spawn(status_led(p.PIN_25.into())).unwrap();
+    spawner.spawn(display_engine(p.PIO0, p.DMA_CH0, p.PIN_16)).unwrap();
+
+    // let Pio {
+    //     mut common, sm0, ..
+    // } = Pio::new(p.PIO0, Irqs);
+
+
+    // let mut ws2812: Ws2812<'_, _, 0, {NUM_DROPS * LEDS_PER_DROP}> = Ws2812::new(&mut common, sm0, p.DMA_CH0, p.PIN_16);
+    // let mut buffer= Buffer50x24::new();
+    // let mut engine = RenderEngine::new();
+
+    // engine.set_renderer(Renderer::Basic(RenderType::Snow));
+
+    // loop {
+    //     engine.render(Fixed::ZERO, Fixed::ZERO, buffer.get_mut_buffer());
+    //     ws2812.write(buffer.into_iter()).await;
+        
+    //     info!("Still alive");
+    //     //Timer::after(Duration::from_millis(40)).await;
+    // }
 }
 
  

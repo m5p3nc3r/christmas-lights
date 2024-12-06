@@ -8,10 +8,9 @@ pub use renderbuffer::RenderBuffer;
 mod render;
 mod renderbuffer;
 mod transition;
-mod fixedcolor;
+pub mod fixedcolor;
 mod vec;
 
-use fixed;
 use transition::Transition;
 
 pub type Fixed = fixed::FixedI32<fixed::types::extra::U24>;
@@ -29,9 +28,6 @@ const HEIGHT: usize = 24;
 pub struct RenderEngine {
     renderer: Renderer,
     transition: Option<Transition<Fixed>>,
-    // TODO: Use Fixed for transition_duration
-
-//    shader_engine: shaders::ShaderEngine,
     // TODO: Place constraints in RenderEngine struct
     render_engine: render::Renderers<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
     front_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
@@ -50,7 +46,6 @@ impl RenderEngine {
             renderer: Renderer::None,
             transition: None,
 
-//            shader_engine: shaders::ShaderEngine::new(),
             render_engine: render::Renderers::new(),
 
             front_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
@@ -60,6 +55,10 @@ impl RenderEngine {
 
     pub fn set_renderer(&mut self, renderer: Renderer) {
         self.renderer = renderer;
+    }
+
+    pub fn get_renderer(&self) -> Renderer {
+        self.renderer
     }
 
     pub fn tx_progress(&self) -> Fixed {
@@ -85,9 +84,6 @@ impl RenderEngine {
                 self.render_engine.step(r);
                 self.render_engine.render(r, t, dt, &mut self.back_buffer);
             }
-            // Renderer::Shader(s) => {
-            //     self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.back_buffer);
-            // }
             Renderer::None => {}
         }
 
@@ -98,9 +94,6 @@ impl RenderEngine {
                     self.render_engine.step(r);
                     self.render_engine.render(r, t, dt, &mut self.front_buffer);
                 }
-                // Renderer::Shader(s) => {
-                //     self.shader_engine.render(&s.to_main_image_fn(), t, dt, &mut self.front_buffer);
-                // }
                 Renderer::None => {}
             }
         }
@@ -108,14 +101,18 @@ impl RenderEngine {
         let progress = self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO);
 
         self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
-//            let new_color = back.scale(1.0 - progress) + front.scale(progress);
             let x = Fixed::ONE - progress;
             let y = progress;
             let new_color = back.scale(x).saturating_add(front.scale(y));
 
             b.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
+//            self.back_buffer.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
         });
 
+    }
+
+    pub fn get_render_buffer(&self) -> &RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT> {
+        &self.back_buffer
     }
 
 }

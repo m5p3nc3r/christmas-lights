@@ -1,4 +1,4 @@
-
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Clone, Copy)]
 pub struct UVec2 {
     pub x: u32,

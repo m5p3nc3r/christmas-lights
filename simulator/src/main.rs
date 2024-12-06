@@ -134,12 +134,12 @@ fn update_offscreen_render(
     r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_seconds()), &mut b.buffer);
 }
 
-fn update_pixels(b: ResMut<LEDRenderBuffer>, mut query: Query<(&Pixel, &mut Sprite)>) {
-    for (pixel, mut sprite) in query.iter_mut() {
+fn update_pixels(r: Res<LEDRenderEngine>, b: ResMut<LEDRenderBuffer>, mut pixels: Query<(&Pixel, &mut Sprite)>) {
+    for (pixel, mut sprite) in pixels.iter_mut() {
         let x = pixel.index / LEDS_PER_DROP;
         let y = pixel.index % LEDS_PER_DROP;
 
-        let color = b.buffer.get_pixel(x, y);
+        let color = r.engine.get_render_buffer().get_pixel(x, y);
         sprite.color = Color::srgb(
             color.r.cast(),
             color.g.cast(),

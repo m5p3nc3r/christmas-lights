@@ -1,6 +1,7 @@
-use crate::UVec2;
 
+use crate::UVec2;
 use crate::fixedcolor::FixedColor;
+
 pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
     size: UVec2,
     buffer: [FixedColor; S],
