@@ -22,34 +22,25 @@ pub enum Renderer {
     None
 }
 
-const WIDTH: usize = 50;
-const HEIGHT: usize = 24;
-
-pub struct RenderEngine {
+pub struct RenderEngine<const S: usize, const X: usize, const Y: usize> {
     renderer: Renderer,
     transition: Option<Transition<Fixed>>,
-    // TODO: Place constraints in RenderEngine struct
-    render_engine: render::Renderers<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
-    front_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
-    back_buffer: RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT>,
+    render_engine: render::Renderers<S, X, Y>,
 }
 
-impl Default for RenderEngine {
+impl<const S: usize, const X: usize, const Y: usize> Default for RenderEngine<S, X, Y> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl RenderEngine {
+impl<const S: usize, const X: usize, const Y: usize> RenderEngine<S, X, Y> {
     pub fn new() -> Self {
         Self {
             renderer: Renderer::None,
             transition: None,
 
             render_engine: render::Renderers::new(),
-
-            front_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
-            back_buffer: RenderBuffer::<{WIDTH * HEIGHT}, WIDTH, HEIGHT>::new(),
         }
     }
 
@@ -69,7 +60,7 @@ impl RenderEngine {
         self.transition = Some(Transition::new(renderer, duration));
     }
 
-    pub fn render<const S: usize, const X: usize, const Y: usize>(&mut self, t: Fixed, dt: Fixed, b: &mut RenderBuffer<S, X, Y>) {
+    pub fn render(&mut self, t: Fixed, dt: Fixed, b: &mut RenderBuffer<S, X, Y>) {
         if let Some(transition) = &mut self.transition {
             transition.step(dt);
             if transition.is_done() {
@@ -78,41 +69,35 @@ impl RenderEngine {
             }
         }
 
-        self.back_buffer.clear();
+        b.clear();
         match self.renderer {
             Renderer::Basic(r) => {
                 self.render_engine.step(r);
-                self.render_engine.render(r, t, dt, &mut self.back_buffer);
+                self.render_engine.render(r, t, dt, b);
             }
             Renderer::None => {}
         }
 
-        self.front_buffer.clear();
-        if let Some(transition) = &mut self.transition {
-            match transition.renderer {
-                Renderer::Basic(r) => {
-                    self.render_engine.step(r);
-                    self.render_engine.render(r, t, dt, &mut self.front_buffer);
-                }
-                Renderer::None => {}
-            }
-        }
+        // self.front_buffer.clear();
+        // if let Some(transition) = &mut self.transition {
+        //     match transition.renderer {
+        //         Renderer::Basic(r) => {
+        //             self.render_engine.step(r);
+        //             self.render_engine.render(r, t, dt, &mut self.front_buffer);
+        //         }
+        //         Renderer::None => {}
+        //     }
+        // }
 
-        let progress = self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO);
+        // let progress = self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO);
 
-        self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
-            let x = Fixed::ONE - progress;
-            let y = progress;
-            let new_color = back.scale(x).saturating_add(front.scale(y));
+        // self.back_buffer.buffer().iter().zip(self.front_buffer.buffer().iter()).enumerate().for_each(|(index, (back, front))| {
+        //     let x = Fixed::ONE - progress;
+        //     let y = progress;
+        //     let new_color = back.scale(x).saturating_add(front.scale(y));
 
-            b.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
-//            self.back_buffer.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
-        });
+        //     b.safe_set_pixel((index % X) as u32, (index / X) as u32, new_color);
+        // });
 
     }
-
-    pub fn get_render_buffer(&self) -> &RenderBuffer<{WIDTH * HEIGHT}, WIDTH, HEIGHT> {
-        &self.back_buffer
-    }
-
 }

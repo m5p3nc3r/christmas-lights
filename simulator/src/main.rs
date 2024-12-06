@@ -3,8 +3,8 @@ use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Fixed};
 use az::Cast;
 
 //
-const NUM_DROP: u32 = 50;
-const LEDS_PER_DROP: u32 = 24;
+const NUM_DROPS: usize = 50;
+const LEDS_PER_DROP: usize = 24;
 const PIXEL_SIZE: Vec2 = Vec2::new(20.0, 20.0);
 const PIXEL_SPACING: f32 = 1.1;
 
@@ -22,7 +22,7 @@ impl Pixel {
     }
 }
 
-type Buffer50x24 = RenderBuffer<{50 * 24}, 50, 24>;
+type Buffer50x24 = RenderBuffer<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>;
 
 #[derive(Resource)]
 struct LEDRenderBuffer {
@@ -39,7 +39,7 @@ impl Default for LEDRenderBuffer {
 
 #[derive(Resource, Default)]
 struct LEDRenderEngine {
-    engine: RenderEngine,
+    engine: RenderEngine<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>,
 }
 
 unsafe impl Send for LEDRenderEngine {}
@@ -73,7 +73,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     let window = windows.single();
     let width = window.width();
     let height = window.height();
-    let pixels_width = NUM_DROP as f32 * PIXEL_SIZE.x * PIXEL_SPACING;
+    let pixels_width = NUM_DROPS as f32 * PIXEL_SIZE.x * PIXEL_SPACING;
     let pixels_height = LEDS_PER_DROP as f32 * PIXEL_SIZE.y * PIXEL_SPACING;
 
     let mut x_offset = (width - pixels_width) / 2.0;
@@ -83,7 +83,7 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 
     let mut index = 0;
 
-    for i in 0..NUM_DROP {
+    for i in 0..NUM_DROPS {
         for j in 0..LEDS_PER_DROP {
             commands.spawn((
                 SpriteBundle {
@@ -134,12 +134,12 @@ fn update_offscreen_render(
     r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_seconds()), &mut b.buffer);
 }
 
-fn update_pixels(r: Res<LEDRenderEngine>, b: ResMut<LEDRenderBuffer>, mut pixels: Query<(&Pixel, &mut Sprite)>) {
+fn update_pixels(b: Res<LEDRenderBuffer>, mut pixels: Query<(&Pixel, &mut Sprite)>) {
     for (pixel, mut sprite) in pixels.iter_mut() {
-        let x = pixel.index / LEDS_PER_DROP;
-        let y = pixel.index % LEDS_PER_DROP;
+        let x = pixel.index / LEDS_PER_DROP as u32;
+        let y = pixel.index % LEDS_PER_DROP as u32;
 
-        let color = r.engine.get_render_buffer().get_pixel(x, y);
+        let color = b.buffer.get_pixel(x, y);
         sprite.color = Color::srgb(
             color.r.cast(),
             color.g.cast(),
