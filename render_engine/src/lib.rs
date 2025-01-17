@@ -1,5 +1,6 @@
 #![no_std]
 
+use renderbuffer::Blend;
 pub use vec::UVec2;
 pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
@@ -73,7 +74,7 @@ impl<const S: usize, const X: usize, const Y: usize> RenderEngine<S, X, Y> {
         match self.renderer {
             Renderer::Basic(r) => {
                 self.render_engine.step(r);
-                self.render_engine.render(r, t, dt, b);
+                self.render_engine.render(r, t, dt, b, Blend::Dest);
             }
             Renderer::None => {}
         }

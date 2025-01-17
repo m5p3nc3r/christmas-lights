@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::ScalingMode};
 use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Fixed};
 use az::Cast;
 
@@ -61,11 +61,21 @@ fn main() {
 
 fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 
-    let mut camera = Camera2dBundle::default();
-    camera.projection.scaling_mode = bevy::render::camera::ScalingMode::FixedHorizontal(1280.0);
+    // let mut camera = Camera2d::default();
+    // camera.projection.scaling_mode = ScalingMode::FixedHorizontal(1280.0);
+
+    // let p = OrthographicProjection {
+    //     scaling_mode: ScalingMode::FixedHorizontal(1280.0),
+    //     ..Default::default()
+    // };
+
 
     // Camera
-    commands.spawn((camera, GameCamera));
+  //  commands.spawn((camera, GameCamera));
+    commands.spawn((Camera2d, Projection::from(OrthographicProjection {
+        scaling_mode: ScalingMode::FixedHorizontal { viewport_width: 1280.0 },
+        ..OrthographicProjection::default_2d()
+    })) );
 
     commands.init_resource::<LEDRenderBuffer>();
     commands.init_resource::<LEDRenderEngine>();
@@ -131,7 +141,7 @@ fn update_offscreen_render(
     mut b: ResMut<LEDRenderBuffer>,
 ) {
     // TODO: Fix elapsed_seconds so that it wraps 
-    r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_seconds()), &mut b.buffer);
+    r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_secs()), &mut b.buffer);
 }
 
 fn update_pixels(b: Res<LEDRenderBuffer>, mut pixels: Query<(&Pixel, &mut Sprite)>) {

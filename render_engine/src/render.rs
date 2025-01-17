@@ -1,3 +1,4 @@
+use crate::renderbuffer::Blend;
 use crate::UVec2;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
@@ -59,10 +60,10 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         }
     }
 
-    pub fn render(&self, renderer: RenderType, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
+    pub fn render(&self, renderer: RenderType, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
         match renderer {
-            RenderType::Sparkle => self.sparkle.render(t, dt, buffer),
-            RenderType::Snow => self.snow.render(t, dt, buffer),
+            RenderType::Sparkle => self.sparkle.render(t, dt, buffer, blend),
+            RenderType::Snow => self.snow.render(t, dt, buffer, blend),
         }
     }
 }
@@ -71,7 +72,7 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
 
 pub trait Render<const S: usize, const X: usize, const Y: usize> {
     fn step(&mut self);
-    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>);
+    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend);
 }
 
 
@@ -128,7 +129,7 @@ impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle 
         }
     }
 
-    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
+    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
         for point in self.points.iter() {
             let colour = point.color.scale(point.phase.cast());
             buffer.safe_set_pixel(point.pos.x, point.pos.y, colour);
@@ -199,7 +200,7 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
             }
         }
     }
-    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>) {
+    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
         for snowflake in self.snowflakes.iter() {
 
             let one = Fixed::ONE;
@@ -208,9 +209,9 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
             let x: u32 = snowflake.pos.x.cast();
             let y: u32 = snowflake.pos.y.cast();
 
-            buffer.safe_set_max_rgb(x, y, snowflake.color.scale(one - phase));
+            buffer.safe_set_max_rgb(x, y, snowflake.color.scale(one - phase), blend);
             if phase >0.0 {
-                buffer.safe_set_max_rgb(x, y+1, snowflake.color.scale(phase));
+                buffer.safe_set_max_rgb(x, y+1, snowflake.color.scale(phase), blend);
             }
         }
     }
