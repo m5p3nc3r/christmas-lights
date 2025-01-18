@@ -35,20 +35,28 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
     }
 
     pub fn clear(&mut self) {
-        for i in 0..self.buffer().len() {
-            self.buffer_mut()[i] = FixedColor::default();
+        self.clear_to_color(FixedColor::default());
+    }
+
+    pub fn clear_to_color(&mut self, color: FixedColor) {
+        for p in self.buffer_mut().iter_mut() {
+            *p = color;
         }
     }
 
+    #[inline(always)]
+    fn index(&self, x: u32, y: u32) -> usize {
+        (x + y * self.size().x) as usize
+    }
+
     pub fn get_pixel(&self, x: u32, y: u32) -> FixedColor {
-        let index = x + y * self.size().x;
-        self.buffer()[index as usize]
+        self.buffer()[self.index(x, y)]
     }
 
     pub fn safe_set_pixel(&mut self, x: u32, y: u32, color: FixedColor) {
         if x < X as u32 && y < Y as u32 {
-            let index = x + y * self.size().x;
-            self.buffer_mut()[index as usize] = color;
+            let index = self.index(x, y);
+            self.buffer_mut()[index] = color;
         }
     }
 

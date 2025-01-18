@@ -41,8 +41,8 @@ pub enum RenderType {
 }
 
 pub struct Renderers<const S: usize, const X: usize, const Y: usize> {
-    sparkle: Sparkle,
-    snow: Snow,
+    sparkle: Sparkle<X, Y>,
+    snow: Snow<X, Y>,
 }
 
 impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
@@ -55,8 +55,8 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
 
     pub fn step(&mut self, renderer: RenderType) {
         match renderer {
-            RenderType::Sparkle => <Sparkle as Render<S, X, Y>>::step(&mut self.sparkle),
-            RenderType::Snow => <Snow as Render<S, X, Y>>::step(&mut self.snow),
+            RenderType::Sparkle => <Sparkle<X, Y> as Render<S, X, Y>>::step(&mut self.sparkle),
+            RenderType::Snow => <Snow<X, Y> as Render<S, X, Y>>::step(&mut self.snow),
         }
     }
 
@@ -83,47 +83,49 @@ struct SparklePoint {
     pos: UVec2,
     color: FixedColor,
     phase: SparklePhase,
+    speed: SparklePhase,
 }
 
 impl SparklePoint {
-    fn random_pos(rng: &mut SmallRng) -> Self {
+    fn random_pos(rng: &mut SmallRng, x_max: u32, y_max: u32) -> Self {
 
         let phase = fixed_rng_gen!(rng, SparklePhase);
+        let speed = fixed_rng_gen_range!(rng, SparklePhase, 0.005, 0.05);
 
         Self {
-            pos: UVec2::new(rng.gen_range(0..50), rng.gen_range(0..24)),
+            pos: UVec2::new(rng.gen_range(0..x_max), rng.gen_range(0..y_max)),
             color: FixedColor::WHITE,
             phase,
+            speed,
         }
     }
 }
 
-const NUM_SPARKLE_POINTS: usize = 200;
+const NUM_SPARKLE_POINTS: usize = 20;
 
-struct Sparkle {
+struct Sparkle<const X: usize, const Y: usize> {
     points: [SparklePoint; NUM_SPARKLE_POINTS],
     rng: SmallRng,
 }
 
-impl Sparkle {
+impl <const X: usize, const Y: usize> Sparkle<X, Y> {
     fn new() -> Self {
         let mut rng = SmallRng::seed_from_u64(0);
 
         Self {
-            points: core::array::from_fn(|_| SparklePoint::random_pos(&mut rng)),
+            points: core::array::from_fn(|_| SparklePoint::random_pos(&mut rng, X as u32, Y as u32)),
             rng,
         }
     }
 }
 
-impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle {
+impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle<X, Y> {
     fn step(&mut self) {
-        let phase_inc = SparklePhase::from_num(0.005);
         for point in self.points.iter_mut() {
-            if let Some(phase) = point.phase.checked_add(phase_inc) {
+            if let Some(phase) = point.phase.checked_add(point.speed) {
                 point.phase = phase;
             } else {
-                *point = SparklePoint::random_pos(&mut self.rng);
+                *point = SparklePoint::random_pos(&mut self.rng, X as u32, Y as u32);
                 point.phase = SparklePhase::default();
             }
         }
@@ -138,7 +140,7 @@ impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle 
 }
 // -----
 
-const NUM_SNOWFLAKES: usize = 200;
+const NUM_SNOWFLAKES: usize = 30;
 const MAX_SNOWFLAKE_SPEED: f32 = 0.5;
 const MIN_SNOWFLAKE_SPEED: f32 = 0.1;
 struct SnowFlake {
@@ -148,7 +150,7 @@ struct SnowFlake {
 }
 
 impl SnowFlake {
-    fn new_random(rng: &mut SmallRng) -> Self {
+    fn new_random(rng: &mut SmallRng, x_max: usize, y_max: usize) -> Self {
         let min = Fixed::from_num(MIN_SNOWFLAKE_SPEED);
         let max = Fixed::from_num(MAX_SNOWFLAKE_SPEED);
 
@@ -159,44 +161,45 @@ impl SnowFlake {
 
         Self { 
             pos:  FixedVec2 {
-                x: fixed_rng_gen_range!(rng, Fixed, 0.0, 50.0),
-                y: fixed_rng_gen_range!(rng, Fixed, 0.0, 24.0),
+                x: fixed_rng_gen_range!(rng, Fixed, 0.0, x_max as f32),
+                y: fixed_rng_gen_range!(rng, Fixed, 0.0, y_max as f32),
             },
             speed,
             color,
         }
     }
 
-    fn new_randon_top(&mut self, rng: &mut SmallRng) {
+    fn new_randon_top(&mut self, rng: &mut SmallRng, x: usize) {
         self.pos = FixedVec2 {
-            x: fixed_rng_gen_range!(rng, Fixed, 0.0, 50.0),
+            x: fixed_rng_gen_range!(rng, Fixed, 0.0, x as f32),
             y: Fixed::ZERO,
         };
     }
 }
 
-struct Snow {
+struct Snow<const X: usize, const Y: usize> {
+    // Would like to make NUM_SNOWFLAKES something like X * Y / 6
     snowflakes: [SnowFlake; NUM_SNOWFLAKES],
     rng: SmallRng,
 }
 
-impl Snow {
+impl<const X: usize, const Y: usize> Snow<X, Y> {
     fn new() -> Self {
         let mut rng = SmallRng::seed_from_u64(0);
 
         Self {
-            snowflakes: core::array::from_fn(|_| SnowFlake::new_random(&mut rng)),
+            snowflakes: core::array::from_fn(|_| SnowFlake::new_random(&mut rng, X, Y)),
             rng,
         }
     }
 }
 
-impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow {
+impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow<X, Y> {
     fn step(&mut self) {
         for snowflake in self.snowflakes.iter_mut() {
             snowflake.pos.y += snowflake.speed;
-            if snowflake.pos.y > 24.0 {
-                snowflake.new_randon_top(&mut self.rng);
+            if snowflake.pos.y > Y {
+                snowflake.new_randon_top(&mut self.rng, X);
             }
         }
     }

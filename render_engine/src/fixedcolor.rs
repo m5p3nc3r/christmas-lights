@@ -16,15 +16,25 @@ impl FixedColor {
         a: T::ONE,
     };
 
+
+    
     pub fn rgb(r: T, g: T, b: T) -> Self {
         Self { r, g, b, a: T::ONE }
     }
 
     pub fn as_rgb8(&self) -> (u8, u8, u8) {
+        fn as_u8(value: T) -> u8 {
+            if value >= T::ONE {
+                return 255;
+            } else if value < T::ZERO {
+                return 0;
+            }
+            (value * 255).to_num::<u8>()
+        }
         (
-            self.r.to_num::<u8>(),
-            self.g.to_num::<u8>(),
-            self.b.to_num::<u8>(),
+            as_u8(self.r),
+            as_u8(self.g),
+            as_u8(self.b),
         )
     }
 
