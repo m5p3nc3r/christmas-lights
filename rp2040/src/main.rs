@@ -3,8 +3,7 @@
 
 mod renderer;
 //mod statusled;
-//mod wifi;
-
+mod wifi;
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -12,8 +11,7 @@ use embassy_rp::bind_interrupts;
 use embassy_rp::peripherals::{PIO0, PIO1};
 use embassy_rp::pio::InterruptHandler;
 
-
-//use wifi::init_wifi;
+use wifi::init_wifi;
 //use crate::statusled::status_led;
 use crate::renderer::render_engine;
 
@@ -33,8 +31,8 @@ async fn main(spawner: Spawner) {
     info!("Start");
     let p: embassy_rp::Peripherals = embassy_rp::init(Default::default());
 
-    // init_wifi(spawner, p.PIN_23.into(), p.PIN_25.into(), p.PIO1, 
-    //     p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1).await;
+    init_wifi(spawner, p.PIN_23.into(), p.PIN_25.into(), p.PIO1, 
+        p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1).await;
 
     // There is no programmable LED on the Pico W
 // spawner.spawn(status_led(p.PIN_25.into())).unwrap();
