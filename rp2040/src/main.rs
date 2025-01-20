@@ -32,7 +32,7 @@ async fn main(spawner: Spawner) {
     let p: embassy_rp::Peripherals = embassy_rp::init(Default::default());
 
     init_wifi(spawner, p.PIN_23.into(), p.PIN_25.into(), p.PIO1, 
-        p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1).await;
+    p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1).await;
 
     // There is no programmable LED on the Pico W
 // spawner.spawn(status_led(p.PIN_25.into())).unwrap();

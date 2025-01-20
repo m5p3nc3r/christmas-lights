@@ -9,7 +9,10 @@ edition = "2021"
 rand = { version = "0.8.4", default-features = false, features = ["small_rng"] }
 fixed = "1.28.0"
 az = "1.2.1"
+defmt = "0.3.10"
+defmt-rtt = "0.4.1"
 bytemuck = {version = "1.19.0", features = ["derive"] }
+libm = "0.2.11"
 
 [features]
 serde = []

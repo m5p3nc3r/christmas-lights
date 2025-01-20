@@ -38,11 +38,13 @@ use crate::{Fixed, RenderBuffer};
 pub enum RenderType {
     Sparkle,
     Snow,
+    Rainbow,
 }
 
 pub struct Renderers<const S: usize, const X: usize, const Y: usize> {
     sparkle: Sparkle<X, Y>,
     snow: Snow<X, Y>,
+    rainbow: Rainbow<X, Y>,
 }
 
 impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
@@ -50,6 +52,7 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         Self {
             sparkle: Sparkle::new(),
             snow: Snow::new(),
+            rainbow: Rainbow::new(),
         }
     }
 
@@ -57,6 +60,7 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         match renderer {
             RenderType::Sparkle => <Sparkle<X, Y> as Render<S, X, Y>>::step(&mut self.sparkle),
             RenderType::Snow => <Snow<X, Y> as Render<S, X, Y>>::step(&mut self.snow),
+            RenderType::Rainbow => <Rainbow<X, Y> as Render<S, X, Y>>::step(&mut self.rainbow),
         }
     }
 
@@ -64,6 +68,7 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         match renderer {
             RenderType::Sparkle => self.sparkle.render(t, dt, buffer, blend),
             RenderType::Snow => self.snow.render(t, dt, buffer, blend),
+            RenderType::Rainbow => self.rainbow.render(t, dt, buffer, blend),
         }
     }
 }
@@ -203,6 +208,7 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow<X,
             }
         }
     }
+
     fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
         for snowflake in self.snowflakes.iter() {
 
@@ -218,5 +224,43 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow<X,
             }
         }
     }
+}
 
+struct Rainbow<const X: usize, const Y: usize> {
+    phase: f32,
+}
+
+impl<const X: usize, const Y: usize> Rainbow<X, Y> {
+    fn new() -> Self {
+        Self {
+            phase: 0.0,
+        }
+    }
+}
+
+
+impl<const S: usize, const X: usize, const Y: usize>  Render<S, X, Y> for Rainbow<X, Y> {
+    fn step(&mut self) {
+        self.phase += 0.05;
+    }
+
+    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
+        for x in 0..X {
+            let offset = x as f32 / X as f32;
+            for y in 0..Y {
+
+                let r = libm::sinf((self.phase + offset) * 2.0) * 0.5 + 0.5;
+                let g = libm::sinf((self.phase + offset) * 0.7) * 0.5 + 0.5;
+                let b = libm::sinf((self.phase + offset) * 1.3) * 0.5 + 0.5;
+    
+                let c = FixedColor{
+                    r: Fixed::from_num(r),
+                    g: Fixed::from_num(g),
+                    b: Fixed::from_num(b),
+                    a: Fixed::ONE,
+                };
+                buffer.safe_set_pixel(x as u32, y as u32, c);
+            }
+        }
+    }
 }

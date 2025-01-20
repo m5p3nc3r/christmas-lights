@@ -1,13 +1,10 @@
 use crate::Irqs;
 
-use defmt::*;
-
 use embassy_rp::peripherals::{DMA_CH0, PIN_16, PIO0};
 use embassy_rp::pio::Pio;
 use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_time::{Duration, Timer};
 
-use render_engine::fixedcolor::FixedColor;
 use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
 use smart_leds::RGB;
 
@@ -74,14 +71,11 @@ pub async fn render_engine(pio: PIO0, dma: DMA_CH0, pin: PIN_16) {
     let mut buffer= Buffer50x24::new();
     let mut engine = RenderEngine::<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>::new();
 
-    engine.set_renderer(Renderer::Basic(RenderType::Snow));
+    engine.set_renderer(Renderer::Basic(RenderType::Rainbow));
 
     loop {
         engine.render(Fixed::ZERO, Fixed::ZERO, buffer.get_mut_buffer());
-        //buffer.0.clear_to_color(FixedColor::WHITE);
-        //buffer.0.safe_set_pixel(3, 0, FixedColor::WHITE);
-        ws2812.write_iter(buffer.into_iter()).await;
-        
+        ws2812.write_iter(buffer.into_iter()).await;        
         Timer::after(Duration::from_millis(40)).await;
     }
 }

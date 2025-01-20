@@ -1,34 +1,26 @@
+use crate::Irqs;
+
 use core::str::from_utf8;
 
 use defmt::*;
 
+use cyw43::{Control, JoinOptions};
+use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use embassy_executor::Spawner;
+use embassy_net::tcp::TcpSocket;
+use embassy_net::{Config, Stack, StackResources};
 use embassy_rp::gpio::{AnyPin, Level, Output};
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::peripherals::{DMA_CH1, PIN_24, PIN_29, PIO1};
 use embassy_rp::pio::Pio;
-
-
-use embassy_net::tcp::TcpSocket;
-use embassy_net::{Config, Stack, StackResources};
+use embassy_time::{Duration, Timer};
 
 use rand::RngCore;
 use embedded_io_async::Write;
 use static_cell::StaticCell;
-use embassy_time::{Duration, Timer};
-
-
-
-
-use cyw43::{Control, JoinOptions};
-use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
-
-use crate::Irqs;
 
 const WIFI_NETWORK: &str = "18mlf";
 const WIFI_PASSWORD: &str = "eieioitsofftoworkwego";
-
-
 
 #[embassy_executor::task]
 async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO1, 0, DMA_CH1>>) -> ! {
@@ -46,7 +38,6 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
     let mut rx_buffer = [0; 4096];
     let mut tx_buffer = [0; 4096];
     let mut buf = [0; 4096];
-
 
     loop {
         match control
