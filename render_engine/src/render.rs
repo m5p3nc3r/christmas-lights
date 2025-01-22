@@ -244,7 +244,7 @@ impl<const S: usize, const X: usize, const Y: usize>  Render<S, X, Y> for Rainbo
         self.phase += 0.05;
     }
 
-    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
+    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
         for x in 0..X {
             let offset = x as f32 / X as f32;
             for y in 0..Y {

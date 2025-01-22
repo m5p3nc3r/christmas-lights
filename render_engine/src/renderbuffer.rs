@@ -1,11 +1,19 @@
 
 use crate::{fixedcolor, Fixed, UVec2};
 use crate::fixedcolor::FixedColor;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_with::serde_as;
 
+#[cfg_attr(feature = "serde", serde_as)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
     size: UVec2,
+    #[cfg_attr(feature = "serde", serde_as(as = "[_; S]"))]
     buffer: [FixedColor; S],
 }
+
 
 impl<const S: usize, const X:usize, const Y:usize> Default for RenderBuffer<S, X, Y> {
     fn default() -> Self {
@@ -103,4 +111,24 @@ pub fn blend_merge(src: FixedColor, dest: FixedColor, phase: fixedcolor::T) -> F
     let b = dest.scale(phase);
 
     a.saturating_add(b)
+}
+
+#[cfg(test)]
+mod test {
+    use serde_binary::binary_stream::Endian;
+    use super::*;
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_stream() {
+        type Buffer = RenderBuffer::<{4 * 4}, 4, 4>;
+
+        let mut buffer = Buffer::new();
+        buffer.safe_set_pixel(1, 1, FixedColor::WHITE);
+
+        let b = serde_binary::to_vec(&buffer, Endian::Big).unwrap();
+        let b2 : Buffer = serde_binary::from_slice(&b, Endian::Big).unwrap();
+
+        assert_eq!(buffer.get_pixel(1, 1), b2.get_pixel(1, 1));
+    }
 }
