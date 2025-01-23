@@ -99,8 +99,6 @@ impl FixedColor {
 
 #[cfg(test)]
 mod tests {
-    use serde_binary::binary_stream::Endian;
-
     use super::*;
 
     #[test]
@@ -112,17 +110,25 @@ mod tests {
     // run this test if the serde feature is enabled
 
     #[cfg(feature = "serde")]
-    #[test]
-    fn test_fixedcolor_serde() {
-        let c = FixedColor::rgb(T::ONE, T::ONE, T::ONE);
-        let b = serde_binary::to_vec(&c, Endian::Big).unwrap();
-        let c2: FixedColor = serde_binary::from_slice(&b, Endian::Big).unwrap();
-        assert_eq!(c, c2);
+    mod serde_tests {
+        use super::*;
+        use ciborium::{de::from_reader, ser::into_writer};
+        #[test]
+        fn test_fixedcolor_serde() {
+
+            let mut buffer = [0u8; 32];
+
+            let c = FixedColor::rgb(T::ONE, T::ONE, T::ONE);
+            let _ = into_writer(&c, &mut buffer[..]).unwrap();
+
+            let c2: FixedColor = from_reader(&buffer[..]).unwrap();
+            assert_eq!(c, c2);
 
 
-        let c3 = FixedColor::from_rgb8(123, 33, 77);
-        let b = serde_binary::to_vec(&c3, Endian::Big).unwrap();
-        let c4 : FixedColor = serde_binary::from_slice(&b, Endian::Big).unwrap();
-        assert_eq!(c3, c4);
+            let c3 = FixedColor::from_rgb8(123, 33, 77);
+            let _ = into_writer(&c3, &mut buffer[..]).unwrap();
+            let c4 : FixedColor = from_reader(&buffer[..]).unwrap();
+            assert_eq!(c3, c4);
+        }
     }
 }

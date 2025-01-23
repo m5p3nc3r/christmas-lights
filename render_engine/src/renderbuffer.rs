@@ -6,10 +6,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_with::serde_as;
 
-#[cfg_attr(feature = "serde", serde_as)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RenderBuffer<const S: usize, const X:usize, const Y:usize> {
+// Use of cfg_eval explained [here](https://docs.rs/serde_with/latest/serde_with/guide/serde_as/index.html#gating-serde_as-on-features)
+#[cfg_attr(feature = "serde", cfg_eval::cfg_eval, serde_as, derive(Serialize, Deserialize))]
+pub struct RenderBuffer<const S: usize, const X: usize, const Y: usize> {
     size: UVec2,
+//    #[cfg_attr(feature = "serde", serde_as(as = "[_; S]"))]
     #[cfg_attr(feature = "serde", serde_as(as = "[_; S]"))]
     buffer: [FixedColor; S],
 }
@@ -115,20 +116,26 @@ pub fn blend_merge(src: FixedColor, dest: FixedColor, phase: fixedcolor::T) -> F
 
 #[cfg(test)]
 mod test {
-    use serde_binary::binary_stream::Endian;
     use super::*;
 
     #[cfg(feature = "serde")]
-    #[test]
-    fn test_stream() {
-        type Buffer = RenderBuffer::<{4 * 4}, 4, 4>;
+    mod serde_tests {
+        #[test]
+        fn test_stream() {
+            use super::*;
+            use ciborium::{de::from_reader, ser::into_writer};
+        
+            type Buffer = RenderBuffer::<{4 * 4}, 4, 4>;
 
-        let mut buffer = Buffer::new();
-        buffer.safe_set_pixel(1, 1, FixedColor::WHITE);
+            let mut buffer = Buffer::new();
+            let mut store = [0u8; 1024];
+            buffer.safe_set_pixel(1, 1, FixedColor::WHITE);
 
-        let b = serde_binary::to_vec(&buffer, Endian::Big).unwrap();
-        let b2 : Buffer = serde_binary::from_slice(&b, Endian::Big).unwrap();
+            let _ = into_writer(&buffer, &mut store[..]).unwrap();
 
-        assert_eq!(buffer.get_pixel(1, 1), b2.get_pixel(1, 1));
+            let b2 : Buffer = from_reader(&store[..]).unwrap();
+
+            assert_eq!(buffer.get_pixel(1, 1), b2.get_pixel(1, 1));
+        }
     }
 }
