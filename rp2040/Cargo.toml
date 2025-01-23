@@ -64,7 +64,7 @@ render_engine = { path = "../render_engine", features = ["serde"]}
 rand = { version = "0.8.5", default-features = false }
 rand_core = "0.6.4"
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
-ciborium = { version = "0.2.2", default-features = false }
+#ciborium = { version = "0.2.2", default-features = false }
 
 
 # serde = { version = "1.0.217", default-features = false, features = ["derive"]}

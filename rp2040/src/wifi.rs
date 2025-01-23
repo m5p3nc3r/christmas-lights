@@ -130,13 +130,10 @@ pub async fn init_wifi(spawner: Spawner, pwr_pin: AnyPin, cs_pin: AnyPin, pio: P
 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
-    info!("wifi task 1");
 
     let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
-    info!("wifi task 2");
 
     spawner.spawn(cyw43_task(runner)).unwrap();
-    info!("wifi task 3");
 
     control.init(clm).await;
     control
