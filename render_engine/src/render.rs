@@ -34,7 +34,7 @@ macro_rules! fixed_rng_gen_range {
 use crate::fixedcolor::FixedColor;
 use crate::{Fixed, RenderBuffer};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum RenderType {
     Sparkle,
     Snow,

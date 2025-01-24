@@ -16,7 +16,7 @@ use transition::Transition;
 
 pub type Fixed = fixed::FixedI32<fixed::types::extra::U24>;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Renderer {
     Basic(render::RenderType),
 //    Shader(shaders::Shader),

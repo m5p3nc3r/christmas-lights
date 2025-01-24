@@ -32,6 +32,7 @@ struct Cli {
 enum Command {
     Clear(ClearArgs),
     Animate(AnimateArgs),
+    Flush,
 }
 
 #[derive(clap::Args)]
@@ -83,6 +84,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Animate(args) => {
             println!("Animating with {:?}", args.subcommand);
             StreamCommand::Animate(args.subcommand.into())
+        }
+        Command::Flush => {
+            println!("Flushing the display");
+            StreamCommand::Flush
         }
     };
 

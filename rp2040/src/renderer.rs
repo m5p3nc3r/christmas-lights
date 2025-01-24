@@ -1,11 +1,12 @@
 use crate::{Irqs, SharedBuffer, SharedEngine};
 
+use embassy_futures::select::{select, Either};
 use embassy_rp::peripherals::{DMA_CH0, PIN_16, PIO0};
 use embassy_rp::pio::Pio;
 use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Ticker, Timer};
 
 use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
 use smart_leds::RGB;
@@ -74,22 +75,49 @@ pub fn get_renderer_for(command: command::Animation) -> Renderer {
     }
 }
 
+
+static RENDERENGINE_CONTROL: Channel<CriticalSectionRawMutex, Renderer, 2> = Channel::new();
+
+pub async fn set_renderer(renderer: Renderer) {
+    defmt::info!("Sending renderer control message");
+    RENDERENGINE_CONTROL.send(renderer).await;
+}
+
 #[embassy_executor::task]
 pub async fn render_engine(engine: &'static SharedEngine, buffer: &'static SharedBuffer) {
     engine.lock(|engine| {
         engine.borrow_mut().set_renderer(Renderer::Basic(RenderType::Snow));
     });
 
+    let mut ticker = Ticker::every(Duration::from_millis(40));
+    let mut paused = false;
+
     loop {
-        // Get access to the shared render buffer
-        buffer.lock(|buffer| {
-            let mut b = buffer.borrow_mut();
-            engine.lock(|engine| {
-                engine.borrow_mut().render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
-            });
-        });
-    
-        flush_led_strip().await;
+        match select(RENDERENGINE_CONTROL.receive(), ticker.next()).await {
+            Either::First(r) => { // The control channel has received a message
+                defmt::info!("Received renderer control message");
+                engine.lock(|engine| {
+                    engine.borrow_mut().set_renderer(r);
+                });
+                            
+                paused = r == Renderer::None;
+            }
+
+            Either::Second(_) => { // The timer has expired
+                if !paused {
+                    // Get access to the shared render buffer
+                    buffer.lock(|buffer| {
+                        let mut b = buffer.borrow_mut();
+                        engine.lock(|engine| {
+                            engine.borrow_mut().render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
+                        });
+                    });
+                
+                    flush_led_strip().await;
+                }
+            }
+        }
+
 
         Timer::after(Duration::from_millis(40)).await;
     }
