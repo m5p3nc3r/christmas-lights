@@ -1,4 +1,5 @@
-use crate::Irqs;
+use crate::renderer::get_renderer_for;
+use crate::{Irqs, SharedBuffer, SharedEngine};
 
 use defmt::*;
 
@@ -14,6 +15,7 @@ use embassy_rp::pio::Pio;
 use embassy_time::{Duration, Timer};
 
 use rand::RngCore;
+use render_engine::fixedcolor::FixedColor;
 use static_cell::StaticCell;
 use command::Command;
 
@@ -32,7 +34,7 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 }
 
 #[embassy_executor::task]
-async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
+async fn io_task(stack: Stack<'static> , mut control: Control<'static>, engine: &'static SharedEngine, buffer: &'static SharedBuffer) {
 
     loop {
         match control
@@ -90,15 +92,28 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
                 }
             };
 
-            info!("Read {} bytes", n);
-            
             let command: Command = minicbor_serde::from_slice(&buf[..n]).unwrap();
             match command {
-                Command::Animate(_) => {
-                    info!("Animate");
+                Command::Animate(anim) => {
+                    engine.lock(|engine| {
+                        engine.borrow_mut().set_renderer(get_renderer_for(anim));
+                    }); 
                 }
                 Command::Clear(r,g,b) => {
-                    info!("Clear {} {} {}", r, g, b)
+                    buffer.lock(|buffer| {
+                        let color = FixedColor::from_rgb8(r, g, b);
+                        info!("Clearing the display to {} {} {}", color.r.to_num::<f32>(), color.g.to_num::<f32>(), color.b.to_num::<f32>());
+                        buffer.borrow_mut().get_mut_buffer().clear_to_color(FixedColor::from_rgb8(r, g, b));
+                    });
+                }
+                Command::Flush => {
+                    // buffer.lock(|buffer| {
+                    //     let mut b = buffer.borrow_mut();
+                    //     engine.lock(|engine| {
+                    //         engine.borrow_mut().render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
+                    //     });
+                    //     ws2812.write_iter(b.into_iter());
+                    // });
                 }
             }
         }
@@ -107,7 +122,7 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
 
 
 
-pub async fn init_wifi(spawner: Spawner, pwr_pin: AnyPin, cs_pin: AnyPin, pio: PIO1, dio: PIN_24, clk: PIN_29, dma: DMA_CH1) {
+pub async fn init_wifi(spawner: Spawner, pwr_pin: AnyPin, cs_pin: AnyPin, pio: PIO1, dio: PIN_24, clk: PIN_29, dma: DMA_CH1, engine: &'static SharedEngine, buffer: &'static SharedBuffer) {
     info!("wifi task");
     let mut rng = RoscRng;
 
@@ -158,5 +173,5 @@ pub async fn init_wifi(spawner: Spawner, pwr_pin: AnyPin, cs_pin: AnyPin, pio: P
 
     spawner.spawn(net_task(runner)).unwrap();
 
-    spawner.spawn(io_task(stack, control)).unwrap();
+    spawner.spawn(io_task(stack, control, engine, buffer)).unwrap();
 }

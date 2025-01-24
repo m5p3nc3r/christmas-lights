@@ -1,8 +1,10 @@
-use crate::{Irqs, SharedBuffer};
+use crate::{Irqs, SharedBuffer, SharedEngine};
 
 use embassy_rp::peripherals::{DMA_CH0, PIN_16, PIO0};
 use embassy_rp::pio::Pio;
 use embassy_rp::pio_programs::ws2812::{PioWs2812, PioWs2812Program};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 
 use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
@@ -11,6 +13,7 @@ use smart_leds::RGB;
 const LEDS_PER_DROP: usize = 24;
 const NUM_DROPS: usize = 5;
 
+pub type RenderEngine50x24 = RenderEngine<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>;
 pub struct Buffer50x24(RenderBuffer<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>);
 
 impl Buffer50x24 {
@@ -61,29 +64,58 @@ impl Iterator for BufferIterator<'_> {
     }
 }
 
+
+pub fn get_renderer_for(command: command::Animation) -> Renderer {
+    match command {
+        command::Animation::None => Renderer::None,
+        command::Animation::Snow => Renderer::Basic(RenderType::Snow),
+        command::Animation::Sparkle => Renderer::Basic(RenderType::Sparkle),
+        command::Animation::Rainbow => Renderer::Basic(RenderType::Rainbow),
+    }
+}
+
 #[embassy_executor::task]
-pub async fn render_engine(pio: PIO0, dma: DMA_CH0, pin: PIN_16, buffer: &'static mut SharedBuffer) {
-    let Pio { mut common, sm0, .. } = Pio::new(pio, Irqs);
-
-    let program = PioWs2812Program::new(&mut common);
-    let mut ws2812: PioWs2812<'_, _, 0, {NUM_DROPS * LEDS_PER_DROP}> = PioWs2812::new(&mut common, sm0, dma, pin, &program);
-
-//    let mut buffer= Buffer50x24::new();
-    let mut engine = RenderEngine::<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP>::new();
-
-
-    engine.set_renderer(Renderer::Basic(RenderType::Snow));
+pub async fn render_engine(engine: &'static SharedEngine, buffer: &'static SharedBuffer) {
+    engine.lock(|engine| {
+        engine.borrow_mut().set_renderer(Renderer::Basic(RenderType::Snow));
+    });
 
     loop {
         // Get access to the shared render buffer
         buffer.lock(|buffer| {
             let mut b = buffer.borrow_mut();
-            engine.render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
-            ws2812.write_iter(b.into_iter());
+            engine.lock(|engine| {
+                engine.borrow_mut().render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
+            });
         });
     
-        ws2812.flush().await;
+        flush_led_strip().await;
 
         Timer::after(Duration::from_millis(40)).await;
+    }
+}
+
+static LEDSTRIP: Channel<CriticalSectionRawMutex, (), 2> = Channel::new();
+
+pub async fn flush_led_strip() {
+    LEDSTRIP.send(()).await;
+}
+
+#[embassy_executor::task]
+pub async fn led_strip_control(pio: PIO0, dma: DMA_CH0, pin: PIN_16, buffer: &'static SharedBuffer) {
+    let Pio { mut common, sm0, .. } = Pio::new(pio, Irqs);
+
+    let program = PioWs2812Program::new(&mut common);
+    let mut ws2812: PioWs2812<'_, _, 0, {NUM_DROPS * LEDS_PER_DROP}> = PioWs2812::new(&mut common, sm0, dma, pin, &program);
+
+    loop {
+        let _ = LEDSTRIP.receive().await;
+
+        buffer.lock(|buffer| {
+            let b = buffer.borrow();
+            ws2812.write_iter(b.into_iter());
+        });
+
+        ws2812.flush().await;
     }
 }

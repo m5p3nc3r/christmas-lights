@@ -49,6 +49,7 @@ struct AnimateArgs {
 
 #[derive(clap::Subcommand, Debug)]
 enum Animation {
+    None,
     Snow,
     Sparkle,
     Rainbow
@@ -58,6 +59,7 @@ enum Animation {
 impl Into<command::Animation> for Animation {
     fn into(self) -> command::Animation {
         match self {
+            Animation::None => command::Animation::None,
             Animation::Snow => command::Animation::Snow,
             Animation::Sparkle => command::Animation::Sparkle,
             Animation::Rainbow => command::Animation::Rainbow,

@@ -70,10 +70,11 @@ impl FixedColor {
     }
 
     pub fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
+
         Self {
-            r: T::from_num(r) / 255,
-            g: T::from_num(g) / 255,
-            b: T::from_num(b) / 255,
+            r: T::from_num((r as f32) / 255.0),
+            g: T::from_num((g as f32) / 255.0),
+            b: T::from_num((b as f32) / 255.0),
             a: T::ONE,
         }
     }

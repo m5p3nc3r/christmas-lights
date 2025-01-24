@@ -70,9 +70,10 @@ impl<const S: usize, const X: usize, const Y: usize> RenderEngine<S, X, Y> {
             }
         }
 
-        b.clear();
         match self.renderer {
             Renderer::Basic(r) => {
+                // Only clear the buffer if there is something to render
+                b.clear();
                 self.render_engine.step(r);
                 self.render_engine.render(r, t, dt, b, Blend::Dest);
             }
