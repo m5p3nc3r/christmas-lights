@@ -1,0 +1,12 @@
+[package]
+name = "streamer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.5.26", features = ["derive"] }
+command = { version = "0.1.0", path = "../command" }
+image = "0.25.5"
+minicbor = { version = "0.25.1", features = ["std"] }
+minicbor-serde = { version = "0.3.2", features = ["std"] }
+serde = { version = "1.0.217", features = ["derive"], default-features = false }

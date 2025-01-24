@@ -1,7 +1,5 @@
 use crate::Irqs;
 
-use core::str::from_utf8;
-
 use defmt::*;
 
 use cyw43::{Control, JoinOptions};
@@ -16,8 +14,8 @@ use embassy_rp::pio::Pio;
 use embassy_time::{Duration, Timer};
 
 use rand::RngCore;
-use embedded_io_async::Write;
 use static_cell::StaticCell;
+use command::Command;
 
 const WIFI_NETWORK: &str = "18mlf";
 const WIFI_PASSWORD: &str = "eieioitsofftoworkwego";
@@ -35,9 +33,6 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 
 #[embassy_executor::task]
 async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
-    let mut rx_buffer = [0; 4096];
-    let mut tx_buffer = [0; 4096];
-    let mut buf = [0; 4096];
 
     loop {
         match control
@@ -61,20 +56,26 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
     info!("IP: {:?}", c.address);
 
 
+    let mut rx_buffer = [0; 4096];
+    let mut tx_buffer = [0; 4096];
+    let mut buf = [0; 4096];
+
 
     loop {
         let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
         socket.set_timeout(Some(Duration::from_secs(10)));
-
+        
         control.gpio_set(0, false).await;
         info!("Listening on TCP:1234...");
         if let Err(e) = socket.accept(1234).await {
             warn!("accept error: {:?}", e);
-            continue;
+                continue;
         }
 
         info!("Received connection from {:?}", socket.remote_endpoint());
         control.gpio_set(0, true).await;
+
+
 
         loop {
             let n = match socket.read(&mut buf).await {
@@ -89,19 +90,20 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>) {
                 }
             };
 
-            info!("rxd {}", from_utf8(&buf[..n]).unwrap());
-
-            match socket.write_all(&buf[..n]).await {
-                Ok(()) => {}
-                Err(e) => {
-                    warn!("write error: {:?}", e);
-                    break;
+            info!("Read {} bytes", n);
+            
+            let command: Command = minicbor_serde::from_slice(&buf[..n]).unwrap();
+            match command {
+                Command::Animate(_) => {
+                    info!("Animate");
                 }
-            };
+                Command::Clear(r,g,b) => {
+                    info!("Clear {} {} {}", r, g, b)
+                }
+            }
         }
     }
 }
-
 
 
 
@@ -157,5 +159,4 @@ pub async fn init_wifi(spawner: Spawner, pwr_pin: AnyPin, cs_pin: AnyPin, pio: P
     spawner.spawn(net_task(runner)).unwrap();
 
     spawner.spawn(io_task(stack, control)).unwrap();
-
 }

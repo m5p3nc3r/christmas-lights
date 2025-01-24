@@ -41,7 +41,7 @@ async fn main(spawner: Spawner) {
         p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1).await;
 
     // There is no programmable LED on the Pico W
-// spawner.spawn(status_led(p.PIN_25.into())).unwrap();
+    //spawner.spawn(status_led(p.PIN_25.into())).unwrap();
     spawner.spawn(render_engine(p.PIO0, p.DMA_CH0, p.PIN_16, buffer)).unwrap();
 }
 

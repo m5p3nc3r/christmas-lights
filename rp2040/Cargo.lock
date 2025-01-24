@@ -136,6 +136,7 @@ dependencies = [
 name = "christmas"
 version = "0.1.0"
 dependencies = [
+ "command",
  "cortex-m",
  "cortex-m-rt",
  "critical-section",
@@ -157,6 +158,8 @@ dependencies = [
  "embedded-io-async",
  "fixed",
  "fixed-macro",
+ "minicbor",
+ "minicbor-serde",
  "panic-probe",
  "pio",
  "pio-proc",
@@ -178,6 +181,13 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
+]
+
+[[package]]
+name = "command"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1042,6 +1052,22 @@ name = "micromath"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
+
+[[package]]
+name = "minicbor"
+version = "0.25.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
+
+[[package]]
+name = "minicbor-serde"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "becf18ac384ecf6f53b2db3b1549eebff664c67ecf259ae99be5912193291686"
+dependencies = [
+ "minicbor",
+ "serde",
+]
 
 [[package]]
 name = "nb"
