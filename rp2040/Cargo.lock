@@ -167,6 +167,7 @@ dependencies = [
  "rand",
  "rand_core",
  "render_engine",
+ "serde",
  "smart-leds",
  "smart-leds-matrix",
  "smart-leds-trait 0.2.1",
@@ -187,6 +188,7 @@ dependencies = [
 name = "command"
 version = "0.1.0"
 dependencies = [
+ "render_engine",
  "serde",
 ]
 

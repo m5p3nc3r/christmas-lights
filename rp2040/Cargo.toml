@@ -63,11 +63,12 @@ smart-leds-trait = "0.2.1"
 render_engine = { path = "../render_engine", features = ["serde"]}
 rand = { version = "0.8.5", default-features = false }
 rand_core = "0.6.4"
-embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
+embedded-io-async = { version = "0.6.1" }
 
 command = { version = "0.1.0", path = "../command" }
 minicbor = "0.25.1"
 minicbor-serde = "0.3.2"
+serde = { version = "1.0.217", default-features = false }
 
 
 [features]
@@ -79,6 +80,7 @@ defmt = [
     "embassy-time/defmt",
     "embassy-time/defmt-timestamp-uptime",
     "embassy-net/defmt",
+    "embedded-io-async/defmt-03",
 ]
 critical-section-impl = ["critical-section/restore-state-u8"]
 

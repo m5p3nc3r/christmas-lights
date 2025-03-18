@@ -18,6 +18,7 @@ use rand::RngCore;
 use render_engine::fixedcolor::FixedColor;
 use static_cell::StaticCell;
 use command::Command;
+use serde::de::Deserialize;
 
 const WIFI_NETWORK: &str = "18mlf";
 const WIFI_PASSWORD: &str = "eieioitsofftoworkwego";
@@ -78,9 +79,11 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>, buffer: 
         control.gpio_set(0, true).await;
 
 
+        let mut write_offset=0;
 
         loop {
-            let n = match socket.read(&mut buf).await {
+            info!("Reading data into buffer at offset {}", write_offset);
+            let n = match socket.read(&mut buf[write_offset..]).await {
                 Ok(0) => {
                     warn!("read EOF");
                     break;
@@ -91,26 +94,77 @@ async fn io_task(stack: Stack<'static> , mut control: Control<'static>, buffer: 
                     break;
                 }
             };
+            let buffer_end = write_offset + n;
 
-            if let Ok(command) = minicbor_serde::from_slice(&buf[..n]) {
-                match command {
-                    Command::Animate(anim) => {
-                        set_renderer(get_renderer_for(anim)).await;
+            info!("Received data {} buffer end {}", n, buffer_end);
+
+            let mut de = minicbor_serde::Deserializer::new(&mut buf);
+
+            // let c = Command::deserialize(&mut de);
+            // let mut c = Command::Flush;
+            // Command::deserialize_in_place(&mut de, &mut c);
+            // info!("decoder position ",  de.decoder().position());
+
+            let mut last_decoded_position = 0;
+
+            while de.decoder().position() < buffer_end {
+                let c = Command::deserialize(&mut de);
+                match c {
+                    Ok(command) => {
+                        process_command(command, buffer).await;
+                        last_decoded_position = de.decoder().position();
                     }
-                    Command::Clear(r,g,b) => {
-                        buffer.lock(|buffer| {
-                            buffer.borrow_mut().get_mut_buffer().clear_to_color(FixedColor::from_rgb8(r, g, b));
-                        });
-                    }
-                    Command::Flush => {
-                        flush_led_strip().await;
+                    Err(_)  => {
+                        // There may be unprocessed data, so we need to break out of the loop
+                        error!("Failed to decode command");
+                        break;
                     }
                 }
+            }
+
+            if last_decoded_position < buffer_end {
+                warn!("Failed to decode with {} bytes left in buffer", buffer_end - last_decoded_position);
+                println!("{:?}", buf[last_decoded_position..buffer_end]);
+                buf.copy_within(last_decoded_position..buffer_end, 0);
+                write_offset = buffer_end - last_decoded_position;
+
+                // HACK: If we have a partial command, we need to flush the buffer
+                flush_led_strip().await;
             } else {
-                    warn!("failed to decode command");
+                write_offset = 0;
             }
         }
     }
+}
+
+async fn process_command(command: Command, buffer: &'static SharedBuffer) {
+    match command {
+        Command::Animate(anim) => {
+            info!("Animate");
+            set_renderer(get_renderer_for(anim)).await;
+        }
+        Command::Clear(r,g,b) => {
+            info!("Clear: r={}, g={}, b={}", r, g, b);
+            buffer.lock(|buffer| {
+                buffer.borrow_mut().get_mut_buffer().clear_to_color(FixedColor::from_rgb8(r, g, b));
+            });
+        }
+        Command::SetPixel(x, y, r, g, b, ) => {
+            //info!("SetPixel: x={}, y={}, r={}, g={}, b={}", x, y, r, g, b);
+            buffer.lock(|buffer| {
+                buffer.borrow_mut().get_mut_buffer().safe_set_pixel(x as u32, y as u32, FixedColor::from_rgb8(r, g, b));
+            });
+        }
+        // Command::SetBuffer(data) => {
+        //     buffer.lock(|buffer| {
+        //         //buffer.borrow_mut().get_mut_buffer().buffer_mut().copy_from_slice(&data);
+        //     });
+        // }
+        Command::Flush => {
+            info!("Flush");
+            flush_led_strip().await;
+        }
+    }        
 }
 
 
