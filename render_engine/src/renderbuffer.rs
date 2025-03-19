@@ -1,5 +1,5 @@
 
-use crate::{fixedcolor, Fixed, UVec2};
+use crate::{fixedcolor, UVec2};
 use crate::fixedcolor::FixedColor;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -82,7 +82,7 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
         }
     }
 
-    pub fn blend_rgb(&mut self, x: u32, y: u32, color: FixedColor, _phase: Fixed, b: Blend)  {
+    pub fn blend_rgb(&mut self, x: u32, y: u32, color: FixedColor, _phase: f32, b: Blend)  {
         let src = self.get_pixel(x, y);
         let new_color = b.blend(src, color);
         self.safe_set_pixel(x, y, new_color);
@@ -94,7 +94,7 @@ impl<const S: usize, const X:usize, const Y:usize> RenderBuffer<S, X, Y> {
 pub enum Blend {
     Src,
     Dest,
-    Merge(Fixed),
+    Merge(f32),
 }
 
 impl Blend {
@@ -108,7 +108,7 @@ impl Blend {
 }
 
 pub fn blend_merge(src: FixedColor, dest: FixedColor, phase: fixedcolor::T) -> FixedColor {
-    let a = src.scale(fixedcolor::T::ONE - phase);
+    let a = src.scale(1.0 - phase);
     let b = dest.scale(phase);
 
     a.saturating_add(b)

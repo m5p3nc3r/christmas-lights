@@ -1,4 +1,4 @@
-use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
+use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType};
 use smart_leds::{SmartLedsWrite, RGB};
 use ws281x_rpi::Ws2812Rpi;
 
@@ -78,7 +78,7 @@ fn main() {
 
 
     loop {
-        engine.render(Fixed::ZERO, Fixed::ZERO, buffer.get_mut_buffer());
+        engine.render(0.0, 0.0, buffer.get_mut_buffer());
         ws.write(buffer.into_iter());
         // sleep for 40ms
         thread::sleep(sleep_duration);

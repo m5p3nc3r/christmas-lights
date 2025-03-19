@@ -3,7 +3,7 @@
 
 mod renderer;
 //mod statusled;
-mod wifi;
+//mod wifi;
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -15,7 +15,7 @@ use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use renderer::{led_strip_control, Buffer50x24, RenderEngine50x24};
 use static_cell::StaticCell;
 use core::cell::RefCell;
-use wifi::init_wifi;
+//use wifi::init_wifi;
 //use crate::statusled::status_led;
 use crate::renderer::render_engine;
 
@@ -41,8 +41,8 @@ async fn main(spawner: Spawner) {
     let engine = ENGINE.init(Mutex::new(RefCell::new(RenderEngine50x24::new())));
 
 
-    init_wifi(spawner, p.PIN_23.into(), p.PIN_25.into(), p.PIO1, 
-        p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1, buffer).await;
+    // init_wifi(spawner, p.PIN_23.into(), p.PIN_25.into(), p.PIO1, 
+    //     p.PIN_24.into(), p.PIN_29.into(), p.DMA_CH1, buffer).await;
 
     // There is no programmable LED on the Pico W
     //spawner.spawn(status_led(p.PIN_25.into())).unwrap();

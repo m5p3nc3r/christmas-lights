@@ -1,66 +1,40 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-pub type T = fixed::FixedI32<fixed::types::extra::U24>;
+pub type T = f32;//fixed::FixedI32<fixed::types::extra::U24>;
+const ZERO:T = 0.0;
+const ONE:T = 1.0;
+const MAX_U8: T = 255.0;
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FixedColor {
-    #[cfg_attr(feature = "serde",serde(with = "serialize_as_i32"))]
     pub r: T,
-    #[cfg_attr(feature = "serde",serde(with = "serialize_as_i32"))]
     pub g: T,
-    #[cfg_attr(feature = "serde",serde(with = "serialize_as_i32"))]
     pub b: T,
-    #[cfg_attr(feature = "serde",serde(with = "serialize_as_i32"))]
     pub a: T,
 }
 
-
-#[cfg(feature = "serde")]
-mod serialize_as_i32 {
-    use super::T;
-    use serde::{self, Serializer, Deserializer, Deserialize};
-
-    pub fn serialize<S>(v: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_i32(v.to_bits())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let bits = i32::deserialize(deserializer)?;
-        Ok(T::from_bits(bits))
-    }
-}
-
-
 impl FixedColor {
     pub const WHITE: Self = Self {
-        r: T::ONE,
-        g: T::ONE,
-        b: T::ONE,
-        a: T::ONE,
+        r: ONE,
+        g: ONE,
+        b: ONE,
+        a: ONE,
     };
-
-
     
     pub fn rgb(r: T, g: T, b: T) -> Self {
-        Self { r, g, b, a: T::ONE }
+        Self { r, g, b, a: ONE }
     }
 
     pub fn as_rgb8(&self) -> (u8, u8, u8) {
         fn as_u8(value: T) -> u8 {
-            if value >= T::ONE {
-                return 255;
-            } else if value < T::ZERO {
+            if value >= ONE {
+                return MAX_U8 as u8;
+            } else if value < ZERO {
                 return 0;
             }
-            (value * 255).to_num::<u8>()
+            (value * 255.0) as u8//.to_num::<u8>()
         }
         (
             as_u8(self.r),
@@ -72,26 +46,26 @@ impl FixedColor {
     pub fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
 
         Self {
-            r: T::from_num((r as f32) / 255.0),
-            g: T::from_num((g as f32) / 255.0),
-            b: T::from_num((b as f32) / 255.0),
-            a: T::ONE,
+            r: (r as f32) / MAX_U8,
+            g: (g as f32) / MAX_U8,
+            b: (b as f32) / MAX_U8,
+            a: ONE,
         }
     }
 
     pub fn scale(&self, scale: T) -> Self {
         Self {
-            r: self.r.saturating_mul(scale),
-            g: self.g.saturating_mul(scale),
-            b: self.b.saturating_mul(scale),
+            r: (self.r * scale).clamp(ZERO, ONE),
+            g: (self.g * scale).clamp(ZERO, ONE),
+            b: (self.b * scale).clamp(ZERO, ONE),
             a: self.a,
         }
     }
     pub fn saturating_add(&self, other: Self) -> Self {
         Self {
-            r: self.r.saturating_add(other.r),
-            g: self.g.saturating_add(other.g),
-            b: self.b.saturating_add(other.b),
+            r: (self.r + other.r).clamp(ZERO, ONE),
+            g: (self.g + other.g).clamp(ZERO, ONE),
+            b: (self.b + other.b).clamp(ZERO, ONE),
             a: self.a,
         }
     }
@@ -104,7 +78,7 @@ mod tests {
 
     #[test]
     fn test_fixedcolor() {
-        let c = FixedColor::rgb(T::ONE, T::ONE, T::ONE);
+        let c = FixedColor::rgb(1.0, 1.0, 1.0);
         assert_eq!(c.as_rgb8(), (255, 255, 255));
     }
 
@@ -119,7 +93,7 @@ mod tests {
 
             let mut buffer = [0u8; 32];
 
-            let c = FixedColor::rgb(T::ONE, T::ONE, T::ONE);
+            let c = FixedColor::rgb(1.0, 1.0, 1.0);
             let _ = into_writer(&c, &mut buffer[..]).unwrap();
 
             let c2: FixedColor = from_reader(&buffer[..]).unwrap();

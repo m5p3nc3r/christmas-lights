@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 rand = { version = "0.8.4", default-features = false, features = ["small_rng"] }
-fixed = "1.28.0"
 az = "1.2.1"
 defmt = "0.3.10"
 defmt-rtt = "0.4.1"
@@ -17,7 +16,7 @@ serde = { version = "1.0.217", default-features = false, features = ["derive"], 
 serde_derive = { version = "1.0.217", default-features = false, features = ["deserialize_in_place"], optional = true }
 serde_with = { version = "3.12.0", default-features = false, features = ["macros"], optional = true }
 cfg_eval = "0.1.2"
-#ciborium = { version = "0.2.2", default-features = false } - can't use because it requires alloc
+# ciborium = { version = "0.2.2", default-features = false } #- can't use because it requires alloc
 
 [features]
 default = ["serde"]

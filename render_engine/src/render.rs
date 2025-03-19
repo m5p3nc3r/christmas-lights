@@ -1,38 +1,11 @@
 use crate::renderbuffer::Blend;
-use crate::UVec2;
+use crate::{UVec2, Vec2};
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
 use az::Cast;
 
-struct FixedVec2 {
-    x: Fixed,
-    y: Fixed,
-}
-
-// A macro that generates a generic typed fixed-point number from a smallrng
-macro_rules! fixed_rng_gen {
-    ($rng:expr, $type:ty) => {
-        {
-            <$type>::from_bits($rng.gen())
-        }
-    };
-}
-
-macro_rules! fixed_rng_gen_range {
-    ($rng:expr, $type:ty, $min:expr, $max:expr) => {
-        {
-            let min = <$type>::from_num($min).to_bits();
-            let max = <$type>::from_num($max).to_bits();
-            let val = $rng.gen_range(min..max);
-            <$type>::from_bits(val)
-        }
-    };
-}
-
-
-
 use crate::fixedcolor::FixedColor;
-use crate::{Fixed, RenderBuffer};
+use crate::RenderBuffer;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum RenderType {
@@ -64,7 +37,7 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
         }
     }
 
-    pub fn render(&self, renderer: RenderType, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
+    pub fn render(&self, renderer: RenderType, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
         match renderer {
             RenderType::Sparkle => self.sparkle.render(t, dt, buffer, blend),
             RenderType::Snow => self.snow.render(t, dt, buffer, blend),
@@ -77,25 +50,23 @@ impl<const S: usize, const X: usize, const Y: usize> Renderers<S, X, Y> {
 
 pub trait Render<const S: usize, const X: usize, const Y: usize> {
     fn step(&mut self);
-    fn render(&self, t: Fixed, dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend);
+    fn render(&self, t: f32, dt: f32, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend);
 }
 
-
-type SparklePhase = fixed::FixedU8<fixed::types::extra::U8>;
 
 #[derive(Clone, Copy)]
 struct SparklePoint {
     pos: UVec2,
     color: FixedColor,
-    phase: SparklePhase,
-    speed: SparklePhase,
+    phase: f32,
+    speed: f32,
 }
 
 impl SparklePoint {
     fn random_pos(rng: &mut SmallRng, x_max: u32, y_max: u32) -> Self {
 
-        let phase = fixed_rng_gen!(rng, SparklePhase);
-        let speed = fixed_rng_gen_range!(rng, SparklePhase, 0.005, 0.05);
+        let phase = rng.gen();
+        let speed = rng.gen_range(0.005..0.05);
 
         Self {
             pos: UVec2::new(rng.gen_range(0..x_max), rng.gen_range(0..y_max)),
@@ -127,16 +98,17 @@ impl <const X: usize, const Y: usize> Sparkle<X, Y> {
 impl<const S:usize, const X: usize, const Y: usize> Render<S, X, Y> for Sparkle<X, Y> {
     fn step(&mut self) {
         for point in self.points.iter_mut() {
-            if let Some(phase) = point.phase.checked_add(point.speed) {
+            let phase = point.phase + point.speed;
+            if phase >= 1.0 {
                 point.phase = phase;
             } else {
                 *point = SparklePoint::random_pos(&mut self.rng, X as u32, Y as u32);
-                point.phase = SparklePhase::default();
+                point.phase = 0.0;
             }
         }
     }
 
-    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
         for point in self.points.iter() {
             let colour = point.color.scale(point.phase.cast());
             buffer.safe_set_pixel(point.pos.x, point.pos.y, colour);
@@ -149,25 +121,25 @@ const NUM_SNOWFLAKES: usize = 30;
 const MAX_SNOWFLAKE_SPEED: f32 = 0.5;
 const MIN_SNOWFLAKE_SPEED: f32 = 0.1;
 struct SnowFlake {
-    pos: FixedVec2,
-    speed: Fixed,
+    pos: Vec2,
+    speed: f32,
     color: FixedColor,
 }
 
 impl SnowFlake {
     fn new_random(rng: &mut SmallRng, x_max: usize, y_max: usize) -> Self {
-        let min = Fixed::from_num(MIN_SNOWFLAKE_SPEED);
-        let max = Fixed::from_num(MAX_SNOWFLAKE_SPEED);
+        let min = MIN_SNOWFLAKE_SPEED;
+        let max = MAX_SNOWFLAKE_SPEED;
 
-        let speed = fixed_rng_gen_range!(rng, Fixed, MIN_SNOWFLAKE_SPEED, MAX_SNOWFLAKE_SPEED);
+        let speed = rng.gen_range(min..max);
         let scale = (speed - min) / (max - min);
         let color = FixedColor::WHITE.scale(scale);
 
 
         Self { 
-            pos:  FixedVec2 {
-                x: fixed_rng_gen_range!(rng, Fixed, 0.0, x_max as f32),
-                y: fixed_rng_gen_range!(rng, Fixed, 0.0, y_max as f32),
+            pos:  Vec2 {
+                x: rng.gen_range(0..x_max) as f32,
+                y: rng.gen_range(0..y_max) as f32,
             },
             speed,
             color,
@@ -175,9 +147,9 @@ impl SnowFlake {
     }
 
     fn new_randon_top(&mut self, rng: &mut SmallRng, x: usize) {
-        self.pos = FixedVec2 {
-            x: fixed_rng_gen_range!(rng, Fixed, 0.0, x as f32),
-            y: Fixed::ZERO,
+        self.pos = Vec2 {
+            x: rng.gen_range(0..x) as f32,
+            y: 0.0,
         };
     }
 }
@@ -203,17 +175,17 @@ impl<const S: usize, const X: usize, const Y: usize> Render<S, X, Y> for Snow<X,
     fn step(&mut self) {
         for snowflake in self.snowflakes.iter_mut() {
             snowflake.pos.y += snowflake.speed;
-            if snowflake.pos.y > Y {
+            if snowflake.pos.y > Y as f32 {
                 snowflake.new_randon_top(&mut self.rng, X);
             }
         }
     }
 
-    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>, blend: Blend) {
         for snowflake in self.snowflakes.iter() {
 
-            let one = Fixed::ONE;
-            let phase = snowflake.pos.y.frac();
+            let one = 1.0;
+            let phase = snowflake.pos.y % 1.0;
 
             let x: u32 = snowflake.pos.x.cast();
             let y: u32 = snowflake.pos.y.cast();
@@ -244,7 +216,7 @@ impl<const S: usize, const X: usize, const Y: usize>  Render<S, X, Y> for Rainbo
         self.phase += 0.05;
     }
 
-    fn render(&self, _t: Fixed, _dt: Fixed, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
+    fn render(&self, _t: f32, _dt: f32, buffer: &mut RenderBuffer<S, X, Y>, _blend: Blend) {
         for x in 0..X {
             let offset = x as f32 / X as f32;
             for y in 0..Y {
@@ -253,12 +225,7 @@ impl<const S: usize, const X: usize, const Y: usize>  Render<S, X, Y> for Rainbo
                 let g = libm::sinf((self.phase + offset) * 0.7) * 0.5 + 0.5;
                 let b = libm::sinf((self.phase + offset) * 1.3) * 0.5 + 0.5;
     
-                let c = FixedColor{
-                    r: Fixed::from_num(r),
-                    g: Fixed::from_num(g),
-                    b: Fixed::from_num(b),
-                    a: Fixed::ONE,
-                };
+                let c = FixedColor::rgb(r, g, b);
                 buffer.safe_set_pixel(x as u32, y as u32, c);
             }
         }

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::camera::ScalingMode};
-use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType, Fixed};
+use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType};
 use az::Cast;
 
 //
@@ -7,9 +7,6 @@ const NUM_DROPS: usize = 50;
 const LEDS_PER_DROP: usize = 24;
 const PIXEL_SIZE: Vec2 = Vec2::new(20.0, 20.0);
 const PIXEL_SPACING: f32 = 1.1;
-
-#[derive(Component)]
-struct GameCamera;
 
 #[derive(Component)]
 struct Pixel {
@@ -71,7 +68,6 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
 
 
     // Camera
-  //  commands.spawn((camera, GameCamera));
     commands.spawn((Camera2d, Projection::from(OrthographicProjection {
         scaling_mode: ScalingMode::FixedHorizontal { viewport_width: 1280.0 },
         ..OrthographicProjection::default_2d()
@@ -96,21 +92,26 @@ fn setup(mut commands: Commands, windows: Query<&mut Window>) {
     for i in 0..NUM_DROPS {
         for j in 0..LEDS_PER_DROP {
             commands.spawn((
-                SpriteBundle {
-                    transform: Transform {
-                        translation: Vec3::new(
-                            PIXEL_SIZE.x * PIXEL_SPACING * i as f32 - x_offset,
-                            -PIXEL_SIZE.y * PIXEL_SPACING * j as f32 + y_offset,
-                            0.0,
-                        ),
-                        scale: PIXEL_SIZE.extend(1.0),
-                        ..default()
-                    },
-                    sprite: Sprite {
-                        ..default()
-                    },
-                    ..default()
-                },
+                Sprite::from_color(Color::BLACK, Vec2::new(PIXEL_SIZE.x, PIXEL_SIZE.y)),
+                Transform::from_xyz(                            PIXEL_SIZE.x * PIXEL_SPACING * i as f32 - x_offset,
+                    -PIXEL_SIZE.y * PIXEL_SPACING * j as f32 + y_offset,
+                    0.0,
+                ),
+                // SpriteBundle {
+                //     transform: Transform {
+                //         translation: Vec3::new(
+                //             PIXEL_SIZE.x * PIXEL_SPACING * i as f32 - x_offset,
+                //             -PIXEL_SIZE.y * PIXEL_SPACING * j as f32 + y_offset,
+                //             0.0,
+                //         ),
+                //         scale: PIXEL_SIZE.extend(1.0),
+                //         ..default()
+                //     },
+                //     sprite: Sprite {
+                //         ..default()
+                //     },
+                //     ..default()
+                // },
                 Pixel::new(index),
             ));
             index += 1;
@@ -124,9 +125,9 @@ fn set_default_shader(mut r: ResMut<LEDRenderEngine>) {
 
 fn keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut r: ResMut<LEDRenderEngine>) {
     if keys.just_pressed(KeyCode::Digit1) {
-        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), Fixed::from_num(1.0));
+        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Sparkle), 1.0);
     } else if keys.just_pressed(KeyCode::Digit2) {
-        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), Fixed::from_num(1.0));
+        r.engine.set_transition_to_renderer(Renderer::Basic(RenderType::Snow), 1.0);
     // } else if keys.just_pressed(KeyCode::Digit3) {
     //     r.engine.set_transition_to_renderer(Renderer::Shader(Shader::Rainbow), Fixed::from_num(1.0));
     // } else if keys.just_pressed(KeyCode::Digit4) {
@@ -141,7 +142,7 @@ fn update_offscreen_render(
     mut b: ResMut<LEDRenderBuffer>,
 ) {
     // TODO: Fix elapsed_seconds so that it wraps 
-    r.engine.render(Fixed::ZERO/*Fixed::from_num(time.elapsed_seconds())*/, Fixed::from_num(time.delta_secs()), &mut b.buffer);
+    r.engine.render(0.0/*time.elapsed_seconds()*/, time.delta_secs(), &mut b.buffer);
 }
 
 fn update_pixels(b: Res<LEDRenderBuffer>, mut pixels: Query<(&Pixel, &mut Sprite)>) {

@@ -1,7 +1,7 @@
 #![no_std]
 
 use renderbuffer::Blend;
-pub use vec::UVec2;
+pub use vec::{UVec2, Vec2};
 pub use render::RenderType;
 pub use renderbuffer::RenderBuffer;
 //pub use shaders::Shader;
@@ -14,8 +14,6 @@ mod vec;
 
 use transition::Transition;
 
-pub type Fixed = fixed::FixedI32<fixed::types::extra::U24>;
-
 #[derive(Clone, Copy, PartialEq)]
 pub enum Renderer {
     Basic(render::RenderType),
@@ -25,7 +23,7 @@ pub enum Renderer {
 
 pub struct RenderEngine<const S: usize, const X: usize, const Y: usize> {
     renderer: Renderer,
-    transition: Option<Transition<Fixed>>,
+    transition: Option<Transition<f32>>,
     render_engine: render::Renderers<S, X, Y>,
 }
 
@@ -53,15 +51,15 @@ impl<const S: usize, const X: usize, const Y: usize> RenderEngine<S, X, Y> {
         self.renderer
     }
 
-    pub fn tx_progress(&self) -> Fixed {
-        self.transition.as_ref().map(|t| t.progress()).unwrap_or(Fixed::ZERO)
+    pub fn tx_progress(&self) -> f32 {
+        self.transition.as_ref().map(|t| t.progress()).unwrap_or(0.0)
     }
 
-    pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: Fixed) {
+    pub fn set_transition_to_renderer(&mut self, renderer: Renderer, duration: f32) {
         self.transition = Some(Transition::new(renderer, duration));
     }
 
-    pub fn render(&mut self, t: Fixed, dt: Fixed, b: &mut RenderBuffer<S, X, Y>) {
+    pub fn render(&mut self, t: f32, dt: f32, b: &mut RenderBuffer<S, X, Y>) {
         if let Some(transition) = &mut self.transition {
             transition.step(dt);
             if transition.is_done() {

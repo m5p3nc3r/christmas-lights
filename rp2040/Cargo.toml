@@ -29,7 +29,7 @@ embassy-time = { version = "0.4.0" }
 embassy-futures = { version = "0.1.0" }
 embassy-hal-internal = { version = "0.2.0" }
 embassy-embedded-hal = { version = "0.3.0" }
-embassy-rp = { version = "0.3.0", features = [
+embassy-rp = { version = "0.4.0", features = [
     "rp2040",
     "unstable-pac",
     "time-driver",
@@ -48,7 +48,7 @@ embassy-net = { version = "0.6.0", features = [
 ] }
 
 cyw43 = "0.3.0"
-cyw43-pio = "0.3.0"
+cyw43-pio = "0.4.0"
 
 
 smart-leds = "0.4.0"
@@ -89,13 +89,13 @@ critical-section-impl = ["critical-section/restore-state-u8"]
 debug = 2
 
 [patch.crates-io]
-embassy-executor = { path="/home/matt/projects/embassy/embassy-executor" }
-embassy-sync = { path="/home/matt/projects/embassy/embassy-sync"}
-embassy-time = { path="/home/matt/projects/embassy/embassy-time" }
-embassy-futures = { path="/home/matt/projects/embassy/embassy-futures" }
-embassy-hal-internal = { path="/home/matt/projects/embassy/embassy-hal-internal" }
-embassy-embedded-hal = { path="/home/matt/projects/embassy/embassy-embedded-hal" }
-embassy-rp = { path="/home/matt/projects/embassy/embassy-rp" }
-embassy-net = { path="/home/matt/projects/embassy/embassy-net"}
-cyw43 = { path="/home/matt/projects/embassy/cyw43" }
-cyw43-pio = { path="/home/matt/projects/embassy/cyw43-pio" }
+embassy-executor = { path="../../embassy/embassy-executor" }
+embassy-sync = { path="../../embassy/embassy-sync"}
+embassy-time = { path="../../embassy/embassy-time" }
+embassy-futures = { path="../../embassy/embassy-futures" }
+embassy-hal-internal = { path="../../embassy/embassy-hal-internal" }
+embassy-embedded-hal = { path="../../embassy/embassy-embedded-hal" }
+embassy-rp = { path="../../embassy/embassy-rp" }
+embassy-net = { path="../../embassy/embassy-net"}
+cyw43 = { path="../../embassy/cyw43" }
+cyw43-pio = { path="../../embassy/cyw43-pio" }

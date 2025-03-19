@@ -1,5 +1,6 @@
 use crate::{Irqs, SharedBuffer, SharedEngine};
 
+use defmt::info;
 use embassy_futures::select::{select, Either};
 use embassy_rp::peripherals::{DMA_CH0, PIN_16, PIO0};
 use embassy_rp::pio::Pio;
@@ -8,7 +9,7 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Ticker, Timer};
 
-use render_engine::{RenderBuffer, RenderEngine, Fixed, Renderer, RenderType};
+use render_engine::{RenderBuffer, RenderEngine, Renderer, RenderType};
 use smart_leds::RGB;
 
 const LEDS_PER_DROP: usize = 24;
@@ -24,6 +25,12 @@ impl Buffer50x24 {
 
     pub fn get_mut_buffer(&mut self) -> &mut RenderBuffer<{NUM_DROPS * LEDS_PER_DROP}, NUM_DROPS, LEDS_PER_DROP> {
         &mut self.0
+    }
+}
+
+impl Default for Buffer50x24 {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -86,6 +93,7 @@ pub async fn set_renderer(renderer: Renderer) {
 #[embassy_executor::task]
 pub async fn render_engine(engine: &'static SharedEngine, buffer: &'static SharedBuffer) {
     engine.lock(|engine| {
+//        engine.borrow_mut().set_renderer(Renderer::None);
         engine.borrow_mut().set_renderer(Renderer::Basic(RenderType::Snow));
     });
 
@@ -109,7 +117,7 @@ pub async fn render_engine(engine: &'static SharedEngine, buffer: &'static Share
                     buffer.lock(|buffer| {
                         let mut b = buffer.borrow_mut();
                         engine.lock(|engine| {
-                            engine.borrow_mut().render(Fixed::ZERO, Fixed::ZERO, b.get_mut_buffer());
+                            engine.borrow_mut().render(0.0, 0.0, b.get_mut_buffer());
                         });
                     });
                 
